@@ -121,3 +121,18 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)
 - [ ] opa plugin: exact `input` document Kong sends (Task 5.2)
 - [ ] passthrough-listener config fields + DeepWiki live protocol version ≥ 2025-06-18 (Task 5.3)
+
+## Build findings (Phase 4) — aegis-style ACL, verified LIVE
+- ✅ **Switched to aegis scope/claim ACL** (reverses D4, at Paul's request). `ai-mcp-proxy` **listener**
+  carries `acl_attribute_type: oauth_access_token` + `access_token_claim_field: groups`; per-tool
+  `acl.allow/deny` (bare group names) stay on the conversion-only tools; the listener enforces at
+  `tools/call`. No Kong consumers/consumer_groups. `acl_attribute_type`/`access_token_claim_field`
+  must be on the LISTENER, not conversion-only (per reference).
+- ✅ `ai-mcp-oauth2` still validates the token (JWKS) + maps identity to `X-User-Id`/`X-User-Name`
+  via `claim_to_header` even with `consumer_optional: true` and no consumers defined (identity headers
+  are independent of consumer mapping). `insecure_relaxed_audience_validation: true` +
+  `passthrough_credentials: true` remain (listener relaxes RFC-8707 resource-audience; inner OIDC
+  enforces scope+audience on the forwarded token).
+- ✅ **Live matrix**: dana→dealer OK; frank→finance OK; olivia(ops)→list_floorplans DENY (allow:[finance]);
+  frank→dealer tool DENY (allow:[dealers,ops]); olivia→list_invoices OK. `[ai-mcp-proxy] MCP ACL: denying`
+  logged on denials. tools/list is NOT ACL-filtered — enforcement is at call time.

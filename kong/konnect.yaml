@@ -57,6 +57,8 @@ services:
                     dealership, sales region, and KBB trade-in interest. Optionally filter by region.
                   method: GET
                   path: /api/dealers/customers
+                  acl:
+                    allow: [dealers, ops]
                   parameters:
                     - name: region
                       in: query
@@ -92,6 +94,9 @@ services:
                     days on lot, and vAuto-style price rank. Optionally filter by price rank.
                   method: GET
                   path: /api/dealers/vehicles
+                  acl:
+                    allow: [dealers, ops]
+                    deny: [finance]
                   parameters:
                     - name: price_rank
                       in: query
@@ -138,6 +143,8 @@ services:
                     amount, and status. Optionally filter by status.
                   method: GET
                   path: /api/finance/invoices
+                  acl:
+                    allow: [finance, ops]
                   parameters:
                     - name: status
                       in: query
@@ -173,6 +180,8 @@ services:
                     and next audit date. Optionally filter by audit urgency.
                   method: GET
                   path: /api/finance/floorplans
+                  acl:
+                    allow: [finance]
                   parameters:
                     - name: status
                       in: query
@@ -194,11 +203,41 @@ routes:
     request_buffering: false
     response_buffering: false
     plugins:
+      - name: ai-mcp-oauth2
+        instance_name: mcp-oauth2-dealers
+        config:
+          authorization_servers: [http://keycloak:8080/realms/cox-auto]
+          resource: http://localhost:8000/mcp/dealers
+          metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+          # ai-mcp-oauth2 otherwise enforces RFC 8707 resource-indicator binding (token aud must
+          # equal the resource URL). Our Keycloak audiences are mcp-*/dealer-api/finance-api, so we
+          # relax that check at the listener and let authorization be enforced by (a) the consumer-group
+          # tool ACL here and (b) the inner openid-connect gate's scope+audience on the forwarded token.
+          insecure_relaxed_audience_validation: true
+          # Forward the client bearer to the inner conversion route so its openid-connect gate can
+          # validate scope+audience. Without this the inner gate gets no token and every tool call 401s.
+          passthrough_credentials: true
+          # ACL is now token-claim based (see the listener's acl_attribute_type), so consumer
+          # groups are no longer mapped. consumer_claim stays optional purely for analytics
+          # attribution if consumers are added later; identity is forwarded via claim_to_header.
+          consumer_claim: [preferred_username]
+          consumer_by: [username]
+          consumer_optional: true
+          claim_to_header:
+            - claim: sub
+              header: X-User-Id
+            - claim: preferred_username
+              header: X-User-Name
       - name: ai-mcp-proxy
         instance_name: mcp-listener-dealers
         config:
           mode: listener
-          include_consumer_groups: true
+          # aegis-style scope/claim ACL: evaluate tool allow/deny against a claim in the
+          # validated OAuth access token (the `groups` claim: [dealers]|[finance]|[ops]),
+          # not Kong consumer groups. acl_attribute_type/access_token_claim_field belong on
+          # the listener; per-tool acl.allow/deny live on the conversion-only tools.
+          acl_attribute_type: oauth_access_token
+          access_token_claim_field: groups
           server:
             tag: dealer-tools
           logging:
@@ -211,11 +250,41 @@ routes:
     request_buffering: false
     response_buffering: false
     plugins:
+      - name: ai-mcp-oauth2
+        instance_name: mcp-oauth2-finance
+        config:
+          authorization_servers: [http://keycloak:8080/realms/cox-auto]
+          resource: http://localhost:8000/mcp/finance
+          metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+          # ai-mcp-oauth2 otherwise enforces RFC 8707 resource-indicator binding (token aud must
+          # equal the resource URL). Our Keycloak audiences are mcp-*/dealer-api/finance-api, so we
+          # relax that check at the listener and let authorization be enforced by (a) the consumer-group
+          # tool ACL here and (b) the inner openid-connect gate's scope+audience on the forwarded token.
+          insecure_relaxed_audience_validation: true
+          # Forward the client bearer to the inner conversion route so its openid-connect gate can
+          # validate scope+audience. Without this the inner gate gets no token and every tool call 401s.
+          passthrough_credentials: true
+          # ACL is now token-claim based (see the listener's acl_attribute_type), so consumer
+          # groups are no longer mapped. consumer_claim stays optional purely for analytics
+          # attribution if consumers are added later; identity is forwarded via claim_to_header.
+          consumer_claim: [preferred_username]
+          consumer_by: [username]
+          consumer_optional: true
+          claim_to_header:
+            - claim: sub
+              header: X-User-Id
+            - claim: preferred_username
+              header: X-User-Name
       - name: ai-mcp-proxy
         instance_name: mcp-listener-finance
         config:
           mode: listener
-          include_consumer_groups: true
+          # aegis-style scope/claim ACL: evaluate tool allow/deny against a claim in the
+          # validated OAuth access token (the `groups` claim: [dealers]|[finance]|[ops]),
+          # not Kong consumer groups. acl_attribute_type/access_token_claim_field belong on
+          # the listener; per-tool acl.allow/deny live on the conversion-only tools.
+          acl_attribute_type: oauth_access_token
+          access_token_claim_field: groups
           server:
             tag: finance-tools
           logging:
@@ -228,12 +297,49 @@ routes:
     request_buffering: false
     response_buffering: false
     plugins:
+      # Phase 4: JWKS validation (like dealers/finance). Phase 5 upgrades THIS instance
+      # to introspection + token_exchange + passthrough_credentials, and adds the opa plugin.
+      - name: ai-mcp-oauth2
+        instance_name: mcp-oauth2-ops
+        config:
+          authorization_servers: [http://keycloak:8080/realms/cox-auto]
+          resource: http://localhost:8000/mcp/ops
+          metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+          # ai-mcp-oauth2 otherwise enforces RFC 8707 resource-indicator binding (token aud must
+          # equal the resource URL). Our Keycloak audiences are mcp-*/dealer-api/finance-api, so we
+          # relax that check at the listener and let authorization be enforced by (a) the consumer-group
+          # tool ACL here and (b) the inner openid-connect gate's scope+audience on the forwarded token.
+          insecure_relaxed_audience_validation: true
+          # Forward the client bearer to the inner conversion route so its openid-connect gate can
+          # validate scope+audience. Without this the inner gate gets no token and every tool call 401s.
+          passthrough_credentials: true
+          # ACL is now token-claim based (see the listener's acl_attribute_type), so consumer
+          # groups are no longer mapped. consumer_claim stays optional purely for analytics
+          # attribution if consumers are added later; identity is forwarded via claim_to_header.
+          consumer_claim: [preferred_username]
+          consumer_by: [username]
+          consumer_optional: true
+          claim_to_header:
+            - claim: sub
+              header: X-User-Id
+            - claim: preferred_username
+              header: X-User-Name
       - name: ai-mcp-proxy
         instance_name: mcp-listener-ops
         config:
           mode: listener
-          include_consumer_groups: true
+          # aegis-style scope/claim ACL: evaluate tool allow/deny against a claim in the
+          # validated OAuth access token (the `groups` claim: [dealers]|[finance]|[ops]),
+          # not Kong consumer groups. acl_attribute_type/access_token_claim_field belong on
+          # the listener; per-tool acl.allow/deny live on the conversion-only tools.
+          acl_attribute_type: oauth_access_token
+          access_token_claim_field: groups
           server:
             tag: bundle-tools
           logging:
             log_audits: true
+
+# Tool filtering is token-claim based (ai-mcp-proxy listener acl_attribute_type:
+# oauth_access_token + access_token_claim_field: groups), so there are no Kong
+# consumers or consumer_groups — the `groups` claim in the validated access token
+# is the ACL subject. See claude/DECISIONS.md (reverses D4).

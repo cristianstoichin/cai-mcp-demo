@@ -15,3 +15,7 @@
   params + log_audits) + 3 serviceless listener routes (server.tag aggregation, include_consumer_groups).
   LIVE-verified: tools/list = 2/2/2-bundled; tools/call round-trips to upstream with a forwarded bearer
   (query_<name> arg namespacing). deck file validate + gateway sync pass.
+- **2026-07-22** — Phase 4 (aegis-style): ai-mcp-oauth2 on all 3 listeners (JWKS, relaxed audience,
+  passthrough, claim_to_header X-User-*) + token-claim tool ACL (acl_attribute_type: oauth_access_token,
+  access_token_claim_field: groups). Reverses D4 per request; no Kong consumers. LIVE-verified allow+deny
+  matrix; X-User-* forwarded. deck sync clean.
