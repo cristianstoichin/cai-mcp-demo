@@ -16,11 +16,15 @@ export const ACTIONS = Object.freeze({
   "registry-setup": { cmd: "bash", args: ["scripts/registry-setup.sh"], desc: "Publish to the MCP Registry" },
 });
 
+// Strip ANSI color/escape codes so the browser terminal shows clean text.
+// eslint-disable-next-line no-control-regex
+const ANSI = new RegExp("\\x1b\\[[0-9;]*m", "g");
+
 export function runAction(action, onData, onEnd) {
   const spec = ACTIONS[action];
   if (!spec) throw new Error(`action not allowed: ${action}`);
   const child = spawn(spec.cmd, spec.args, { cwd: REPO, env: process.env });
-  const pump = (buf) => String(buf).split("\n").forEach(l => l && onData(l));
+  const pump = (buf) => String(buf).replace(ANSI, "").split("\n").forEach(l => l && onData(l));
   child.stdout.on("data", pump);
   child.stderr.on("data", pump);
   child.on("close", (code) => onEnd(code ?? -1));
