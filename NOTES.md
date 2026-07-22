@@ -248,3 +248,23 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - ✅ **Live matrix**: dana→dealer OK; frank→finance OK; olivia(ops)→list_floorplans DENY (allow:[finance]);
   frank→dealer tool DENY (allow:[dealers,ops]); olivia→list_invoices OK. `[ai-mcp-proxy] MCP ACL: denying`
   logged on denials. tools/list is NOT ACL-filtered — enforcement is at call time.
+
+## Build findings (demo-ui) — verdict signatures re-verified LIVE
+- ✅ All 5 verdict signatures reproduced through the demo-ui server (`POST /api/mcp`) against the
+  running stack, and `verdict.js classify()` matches every one:
+  - `401` + `{"message":"Unauthorized"}`  → **auth-fail** (ai-mcp-oauth2 gate; no/invalid token).
+  - `403` + `{"message":"Forbidden"}` (Kong JSON)  → **acl-deny** (MCP tool ACL; also the REST OIDC
+    scope/aud gate — same 403 shape, distinguished from OPA by body ≠ `unauthorized`).
+  - `403` + `{"message":"unauthorized"}`  → **opa-deny** (external OPA policy).
+  - `200` + JSON-RPC `isError:true`, text `HTTP call failed with status 403`  → **inner-gate-deny**
+    (the token lacks the API audience; the case token-exchange fixes on /mcp/ops). MUST read the body,
+    not the status.
+  - `200` + `result.content`/`result.tools`  → **allow**.
+- 🔧 The Kong 403 ACL body is JSON `{"message":"Forbidden"}` (not raw HTML as the spec table phrased
+  it) — the classifier keys off "403 that is NOT `{"message":"unauthorized"}`", so both forms classify
+  as acl-deny correctly. No code change needed; noted for accuracy.
+- ✅ Exchange BEFORE/AFTER reproduced out-of-band (`/api/exchange-preview`, U7): mcp:use-only token
+  aud=[mcp-finance,mcp-ops,kong-exchange,mcp-dealers] → after aud=[dealer-api,finance-api],
+  scope=dealers:read finance:read, groups=[ops] retained, azp flips demo-cli→kong-exchange.
+- ✅ Stack SSE stream verified live (preflight 17/17 streamed to the browser terminal); ANSI color
+  codes are stripped server-side in stack.js so the browser terminal shows clean text.
