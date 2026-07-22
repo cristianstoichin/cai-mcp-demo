@@ -31,3 +31,9 @@
   doc-verified BY OBSERVATION (OPA decision_logs) — caught claim_to_header base64-encoding array claims.
   OPA runs -w (hot-reload). LIVE-verified: overdue filter → 403 while list_invoices/list_dealer_customers
   → 200; hot-reload flip took effect with no deck sync. opa check + deck validate pass.
+- **2026-07-22** — Phase 5.3: market-mcp (plain-ESM Node MCP server, Streamable HTTP, tools
+  market_price_check + days_supply_lookup) + two passthrough-listener routes: /mcp/remote → market-mcp
+  (we own), /mcp/remote-public → DeepWiki (third-party). Both fronted by ai-mcp-oauth2 (JWKS gate,
+  passthrough_credentials:false — internal token not leaked to remotes); upstreams via decK url: shorthand
+  from .env. LIVE-verified: both 401 unauth; /mcp/remote tools/list+tools/call returns market data;
+  /mcp/remote-public proxies DeepWiki (protocol 2025-06-18, stateless) tools/list. **Phase 5 COMPLETE.**

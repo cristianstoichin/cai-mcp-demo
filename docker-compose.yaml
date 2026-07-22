@@ -175,6 +175,11 @@ services:
       # artifact (like the keycloak: issuer), the secret comes from .env.
       DECK_KONG_EXCHANGE_CLIENT_ID: ${KONG_EXCHANGE_CLIENT_ID:-kong-exchange}
       DECK_KONG_EXCHANGE_SECRET: ${KONG_EXCHANGE_SECRET}
+      # Passthrough remote-MCP upstreams (Phase 5.3). decK `url:` shorthand on the
+      # service expands each into protocol/host/port/path. Keeps the targets in .env
+      # so the demo is portable (swap DeepWiki for any third-party MCP server).
+      DECK_REMOTE_MCP_URL: ${REMOTE_MCP_URL}
+      DECK_REMOTE_PUBLIC_MCP_URL: ${REMOTE_PUBLIC_MCP_URL}
     volumes:
       - ./kong:/config:ro
     profiles: ["tools"]

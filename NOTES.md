@@ -126,7 +126,7 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - [ ] Konnect control-plane create + DP client-cert (PKI/pinned) generate/upload API — for konnect-bootstrap.sh (Task 2.1)
 - [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)
 - [x] opa plugin: exact `input` document Kong sends (Task 5.2) — doc-verified by observation, see below
-- [ ] passthrough-listener config fields + DeepWiki live protocol version ≥ 2025-06-18 (Task 5.3)
+- [x] passthrough-listener config fields + DeepWiki live protocol version ≥ 2025-06-18 (Task 5.3) — verified, see below
 
 ## Build findings (Phase 5.1 — introspection + token exchange on /mcp/ops) — verified LIVE
 - ✅ **Introspection + token_exchange on one `ai-mcp-oauth2` instance works.** `/mcp/ops` sets
@@ -183,6 +183,29 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   `allow:[finance,ops]` denies a dealers-only caller before OPA runs), so it's verified OFFLINE via
   `opa eval` against the observed input, not live. It stays as the "same entitlement, externalized" teaching
   point; Rule 2 is the live OPA-is-the-decider proof.
+
+## Build findings (Phase 5.3 — passthrough-listener remotes) — verified LIVE
+- ✅ **passthrough-listener upstream = the Kong SERVICE the route is attached to** (NOT a plugin config
+  field). Both remote routes hang off a service whose `url:` (decK shorthand) expands to
+  protocol/host/port/path — `remote-market-mcp-service` → `${REMOTE_MCP_URL}` (http://market-mcp:3000/mcp),
+  `remote-public-mcp-service` → `${REMOTE_PUBLIC_MCP_URL}` (https://mcp.deepwiki.com/mcp). `strip_path:true`
+  so `/mcp/remote[-public]` → the service's own `/mcp` path. Mirrors the aegis policy-mcp/claims wiring.
+- ✅ `tools[]` is OPTIONAL in passthrough-listener (only needed for per-tool ACL matching). We omit it →
+  transparent proxy of ALL upstream tools. `server` config is ignored in passthrough (state lives on the
+  upstream MCP server, per reference). Kept `logging.log_audits` + `request/response_buffering:false` (SSE).
+- ✅ **ai-mcp-oauth2 fronts both remotes as a pure auth gate** (JWKS, `insecure_relaxed_audience_validation`,
+  `consumer_optional`). `passthrough_credentials: false` — Kong validates the cox-auto token and does NOT
+  forward it to the remote MCP (don't leak an internal token to a third party you're governing). Live: both
+  routes 401 unauth; a valid `mcp:use` token proxies through. This is the "govern a remote MCP" story.
+- ✅ **DeepWiki (third-party) live protocol = `2025-06-18`** (serverInfo DeepWiki 2.14.3), meets the
+  ≥2025-06-18 bar. Tools: `ask_question`, `read_wiki_contents`, `read_wiki_structure`.
+- 🔧 **DeepWiki is STATELESS** — it returns NO `mcp-session-id` header (direct OR through Kong), so a
+  session-less `tools/list` works. market-mcp (session-based, aegis pattern) DOES return `mcp-session-id`
+  and needs the init→notifications/initialized→session handshake. Passthrough handles both models; demo
+  clients must not assume every remote issues a session id.
+- ✅ **market-mcp**: plain-ESM Node (no tsc) `@modelcontextprotocol/sdk` StreamableHTTPServerTransport at
+  `/mcp`, tools `market_price_check` + `days_supply_lookup`, `/health` for the container check. Live via
+  Kong: tools/list + `tools/call market_price_check {make:Ford,model:F-150}` returns the market band.
 
 ## Build findings (Phase 4) — aegis-style ACL, verified LIVE
 - ✅ **Switched to aegis scope/claim ACL** (reverses D4, at Paul's request). `ai-mcp-proxy` **listener**

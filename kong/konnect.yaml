@@ -190,6 +190,83 @@ services:
                       schema:
                         type: string
 
+  # ---------------------------------------------------------------------------
+  # Remote MCP passthrough targets (Phase 5.3). Unlike the conversion services
+  # above (REST→MCP), these are already-MCP servers Kong governs and PROXIES via
+  # ai-mcp-proxy mode: passthrough-listener. The upstream MCP URL is the service's
+  # own url (decK `url:` shorthand → protocol/host/port/path), fed from .env so the
+  # remote targets are swappable. ai-mcp-oauth2 fronts both: a valid cox-auto token
+  # is required to reach either remote. passthrough_credentials:false — Kong
+  # terminates our auth and does NOT forward the internal token to the remote MCP.
+  # ---------------------------------------------------------------------------
+  - name: remote-market-mcp-service   # local Cox market-mcp — a remote we OWN
+    url: ${{ env "DECK_REMOTE_MCP_URL" }}
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: mcp-remote
+        paths: [/mcp/remote]
+        methods: [GET, POST, DELETE]
+        strip_path: true
+        request_buffering: false
+        response_buffering: false
+        plugins:
+          - name: ai-mcp-oauth2
+            instance_name: mcp-oauth2-remote
+            config:
+              authorization_servers: [http://keycloak:8080/realms/cox-auto]
+              resource: http://localhost:8000/mcp/remote
+              metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+              insecure_relaxed_audience_validation: true
+              passthrough_credentials: false
+              consumer_optional: true
+              claim_to_header:
+                - claim: sub
+                  header: X-User-Id
+                - claim: preferred_username
+                  header: X-User-Name
+          - name: ai-mcp-proxy
+            instance_name: mcp-passthrough-remote
+            config:
+              mode: passthrough-listener
+              logging:
+                log_audits: true
+
+  - name: remote-public-mcp-service   # third-party MCP we do NOT own (DeepWiki)
+    url: ${{ env "DECK_REMOTE_PUBLIC_MCP_URL" }}
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: mcp-remote-public
+        paths: [/mcp/remote-public]
+        methods: [GET, POST, DELETE]
+        strip_path: true
+        request_buffering: false
+        response_buffering: false
+        plugins:
+          - name: ai-mcp-oauth2
+            instance_name: mcp-oauth2-remote-public
+            config:
+              authorization_servers: [http://keycloak:8080/realms/cox-auto]
+              resource: http://localhost:8000/mcp/remote-public
+              metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+              insecure_relaxed_audience_validation: true
+              passthrough_credentials: false
+              consumer_optional: true
+              claim_to_header:
+                - claim: sub
+                  header: X-User-Id
+                - claim: preferred_username
+                  header: X-User-Name
+          - name: ai-mcp-proxy
+            instance_name: mcp-passthrough-remote-public
+            config:
+              mode: passthrough-listener
+              logging:
+                log_audits: true
+
 # =============================================================================
 # MCP listener routes (serviceless). Each aggregates the conversion-only tools
 # whose plugin carries the matching entity tag (config.server.tag). Phase 4 adds
