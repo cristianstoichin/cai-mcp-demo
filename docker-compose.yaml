@@ -18,6 +18,13 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HTTP_ENABLED: "true"
+      # Pin the issuer to the internal docker hostname so token `iss` is identical
+      # whether a token is minted from the host (via localhost:8080 backchannel) or
+      # validated by the Kong DP (which reaches Keycloak at keycloak:8080). Without
+      # this, host-minted tokens carry iss=localhost:8080 and every OIDC/JWKS check
+      # in Kong 401s on an issuer mismatch. hostname-strict off lets the host still
+      # reach the token endpoint on localhost:8080. See NOTES.md.
+      KC_HOSTNAME: http://keycloak:8080
       KC_HOSTNAME_STRICT: "false"
       KC_HEALTH_ENABLED: "true"
     volumes:

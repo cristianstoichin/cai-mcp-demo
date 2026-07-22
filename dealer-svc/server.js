@@ -50,16 +50,19 @@ const VEHICLES = [
 // --- Routes --------------------------------------------------------------------
 app.get("/health", (_req, res) => res.json({ status: "ok", svc: "dealer-svc" }));
 
-// GET /customers?region=<southeast|midwest|west|northeast>
-app.get("/customers", (req, res) => {
+// Kong routes forward these paths verbatim (strip_path:false), so the mock owns
+// the real dealer API surface. ai-mcp-proxy converts each into an MCP tool.
+
+// GET /api/dealers/customers?region=<southeast|midwest|west|northeast>
+app.get("/api/dealers/customers", (req, res) => {
   const { region } = req.query;
   let rows = CUSTOMERS;
   if (region) rows = rows.filter((c) => c.region === String(region).toLowerCase());
   res.json({ count: rows.length, customers: rows });
 });
 
-// GET /vehicles?price_rank=<great|good|fair|high>
-app.get("/vehicles", (req, res) => {
+// GET /api/dealers/vehicles?price_rank=<great|good|fair|high>
+app.get("/api/dealers/vehicles", (req, res) => {
   const rank = req.query.price_rank;
   let rows = VEHICLES;
   if (rank) rows = rows.filter((v) => v.vauto_price_rank === String(rank).toLowerCase());

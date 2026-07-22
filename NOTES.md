@@ -74,6 +74,32 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   :8000 regardless. Verify services in-network (`docker compose exec <peer> node -e ...`) when a host
   port is contended.
 
+## Build findings (Phase 2)
+- ✅ **openid-connect bearer-only fields** (developer.konghq.com/plugins/openid-connect/reference/):
+  `issuer`, `auth_methods:[bearer]`, `scopes_claim:[scope]`(default), `scopes_required[]`,
+  `audience_claim:[aud]`(default), `audience_required[]`, `disable_session:[bearer]`.
+- 🔧 **Issuer must be identical + reachable from host AND the Kong DP.** Host mints tokens via
+  `localhost:8080`; the DP validates via the docker network (`keycloak:8080`). If Keycloak's issuer
+  floats with the request host, host-minted tokens (`iss=localhost:8080`) fail the DP's JWKS/issuer
+  check → 401. Fix: **pin `KC_HOSTNAME: http://keycloak:8080`** + `KC_HOSTNAME_STRICT:false`.
+  Verified: discovery issuer = `http://keycloak:8080/realms/cox-auto` from both host and network;
+  host backchannel minting still works; minted `iss` matches. So `openid-connect.issuer` and
+  `ai-mcp-oauth2.authorization_servers` both use `http://keycloak:8080/realms/cox-auto`.
+  Caveat: client-facing protected-resource metadata will advertise `keycloak:8080` (not host-resolvable)
+  — only matters for the interactive Claude Code browser OAuth (Phase 6); curl-with-bearer is unaffected.
+- ✅ **Konnect CP + DP-cert API** (Control Planes API v2 via kong-konnect MCP): create
+  `POST /v2/control-planes {name, cluster_type:"CLUSTER_TYPE_CONTROL_PLANE", auth_type:"pki_client_certs"}`;
+  response `result.config.{control_plane_endpoint,telemetry_endpoint}`; pin DP cert
+  `POST /v2/control-planes/{id}/dp-client-certificates {cert,title}`. A self-signed cert works in PKI
+  mode (self-issued trust anchor) — the standard Kong hybrid approach. `list_control_planes` supports
+  `filter[name][eq]` for idempotent find-or-create.
+- **Routing choice:** REST routes use `strip_path:false` and the mock services own their real API paths
+  (`/api/dealers/*`, `/api/finance/*`) → 1:1 route→upstream mapping, no rewrite needed. Two services,
+  four routes per spec.
+- **decK scope:** no `select_tags` — the demo runs on a **dedicated** control plane (bootstrap creates
+  `cai-mcp-demo`), so `deck gateway sync` manages the whole CP. Functional entity `tags` on ai-mcp-proxy
+  plugins (dealer-tools/finance-tools/bundle-tools) remain, for `server.tag` aggregation.
+
 ## Open doc-verify items (do before wiring the relevant task)
 - [ ] Konnect control-plane create + DP client-cert (PKI/pinned) generate/upload API — for konnect-bootstrap.sh (Task 2.1)
 - [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)

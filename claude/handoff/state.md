@@ -12,7 +12,6 @@ _Updated 2026-07-22 (Phase 1)._
 - finance-svc: `/invoices`(status filter), `/floorplans`(due-soon/ok), `/health`.
 
 ## Not yet built
-- Phase 2: konnect-bootstrap.sh, kong-dp DP env, kong/konnect.yaml (services/routes/OIDC), deck sync.
 - Phase 3: ai-mcp-proxy conversion-only + listener.
 - Phase 4: ai-mcp-oauth2 + consumers/groups + ACLs.
 - Phase 5: token exchange + OPA + market-mcp + passthrough remotes.

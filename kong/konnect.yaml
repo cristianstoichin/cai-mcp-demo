@@ -1,0 +1,100 @@
+# =============================================================================
+# cai-mcp-demo — Kong declarative config (decK), synced to a DEDICATED Konnect
+# control plane. No select_tags: the demo owns its control plane, so `deck gateway
+# sync` reconciles the whole CP to this file. Functional entity `tags` on the
+# ai-mcp-proxy plugins (added in Phase 3) drive listener aggregation by server.tag.
+#
+# Phase 2 scope: two REST services, four routes, openid-connect bearer-only gates.
+# ai-mcp-proxy / ai-mcp-oauth2 / consumers / ACLs / OPA arrive in later phases.
+#
+# Issuer note: openid-connect.issuer is the INTERNAL Keycloak URL (reachable from
+# the DP) and Keycloak is pinned to that same hostname so token `iss` matches
+# whether minted from the host or validated by the DP. See NOTES.md (Phase 2).
+# =============================================================================
+_format_version: "3.0"
+
+_konnect:
+  control_plane_name: ${{ env "DECK_KONNECT_CONTROL_PLANE_NAME" }}
+
+services:
+  # ---------------------------------------------------------------------------
+  # Dealer REST API -> converted to MCP tools (Phase 3).
+  # ---------------------------------------------------------------------------
+  - name: dealer-svc
+    host: dealer-svc
+    port: 3000
+    protocol: http
+    connect_timeout: 10000
+    read_timeout: 30000
+    write_timeout: 30000
+    routes:
+      - name: dealer-customers
+        paths:
+          - /api/dealers/customers
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: openid-connect
+            instance_name: oidc-dealer-customers
+            config:
+              issuer: http://keycloak:8080/realms/cox-auto
+              auth_methods: [bearer]
+              scopes_required: [dealers:read]
+              audience_required: [dealer-api]
+              disable_session: [bearer]
+
+      - name: dealer-vehicles
+        paths:
+          - /api/dealers/vehicles
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: openid-connect
+            instance_name: oidc-dealer-vehicles
+            config:
+              issuer: http://keycloak:8080/realms/cox-auto
+              auth_methods: [bearer]
+              scopes_required: [dealers:read]
+              audience_required: [dealer-api]
+              disable_session: [bearer]
+
+  # ---------------------------------------------------------------------------
+  # Finance REST API -> converted to MCP tools (Phase 3).
+  # ---------------------------------------------------------------------------
+  - name: finance-svc
+    host: finance-svc
+    port: 3000
+    protocol: http
+    connect_timeout: 10000
+    read_timeout: 30000
+    write_timeout: 30000
+    routes:
+      - name: finance-invoices
+        paths:
+          - /api/finance/invoices
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: openid-connect
+            instance_name: oidc-finance-invoices
+            config:
+              issuer: http://keycloak:8080/realms/cox-auto
+              auth_methods: [bearer]
+              scopes_required: [finance:read]
+              audience_required: [finance-api]
+              disable_session: [bearer]
+
+      - name: finance-floorplans
+        paths:
+          - /api/finance/floorplans
+        methods: [GET]
+        strip_path: false
+        plugins:
+          - name: openid-connect
+            instance_name: oidc-finance-floorplans
+            config:
+              issuer: http://keycloak:8080/realms/cox-auto
+              auth_methods: [bearer]
+              scopes_required: [finance:read]
+              audience_required: [finance-api]
+              disable_session: [bearer]

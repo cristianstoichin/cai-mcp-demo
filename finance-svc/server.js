@@ -47,16 +47,18 @@ const FLOORPLANS = [
 // --- Routes --------------------------------------------------------------------
 app.get("/health", (_req, res) => res.json({ status: "ok", svc: "finance-svc" }));
 
-// GET /invoices?status=<paid|overdue|pending>
-app.get("/invoices", (req, res) => {
+// Kong routes forward these paths verbatim (strip_path:false).
+
+// GET /api/finance/invoices?status=<paid|overdue|pending>
+app.get("/api/finance/invoices", (req, res) => {
   const { status } = req.query;
   let rows = INVOICES;
   if (status) rows = rows.filter((i) => i.status === String(status).toLowerCase());
   res.json({ count: rows.length, invoices: rows });
 });
 
-// GET /floorplans?status=<due-soon|ok>  (derived: due-soon = audit within 21 days of 2026-07-22)
-app.get("/floorplans", (req, res) => {
+// GET /api/finance/floorplans?status=<due-soon|ok>  (due-soon = audit on/before 2026-08-12)
+app.get("/api/finance/floorplans", (req, res) => {
   const { status } = req.query;
   let rows = FLOORPLANS;
   if (status === "due-soon") {
