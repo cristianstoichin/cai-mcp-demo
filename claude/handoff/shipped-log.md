@@ -60,3 +60,12 @@
   17/17 streamed. All 5 verdict signatures re-verified live through `/api/mcp` (NOTES.md demo-ui block);
   verdict.js unit test 7/7. Cox palette approximate (CSS-var swap). `.env` gained UI_PORT +
   KONNECT_DASHBOARD_ID (=388e3b28-2162-4d9a-9e17-579045130708 for this org).
+- **2026-07-22** — **demo-ui containerized** (reverses U6 → DECISIONS U9). Added `demo-ui` as a Compose
+  service (multi-stage `demo-ui/Dockerfile`, mirrors the aegis dashboard) so `docker compose up` runs
+  the whole demo in one command; reaches Kong/Keycloak in-network (kong-dp:8000 / keycloak:8080),
+  published host-local on 127.0.0.1:4000. `scripts/ui.sh` host-run RETAINED. Split by capability:
+  Demo/Explore/Registry/Exchange identical in both modes; Stack **execute** actions are host-only
+  (UI_IN_CONTAINER guard + UI note — a container mustn't tear down its own compose project); Stack
+  **status** works in-container via read-only /var/run/docker.sock + `docker ps` (label-filtered).
+  LIVE-verified: built --no-cache, up healthy, all 5 verdict signatures + exchange + registry(5) +
+  status(6) correct through the container; Playwright confirmed the in-container Stack note renders.

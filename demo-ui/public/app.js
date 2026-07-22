@@ -127,20 +127,27 @@ const STACK_ACTIONS = [
 ];
 async function renderStack() {
   setNav("stack");
+  const meta = await api.meta();
+  // In-container: a container must not tear down its own compose project, so the
+  // execute buttons are host-only. Show a note pointing at scripts/ui.sh instead.
+  const actionsBlock = meta.inContainer
+    ? `<div class="tile" style="margin-top:6px">Stack execute actions (up / down / sync / preflight / smoke /
+         registry-setup) run <strong>host-side</strong> — launch the cockpit with
+         <code>scripts/ui.sh</code> to drive them. (A container shouldn't tear down its own compose project.)</div>`
+    : `<div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">
+         ${STACK_ACTIONS.map(([a, d]) => `<button class="persbtn" data-a="${a}" title="${d}">${a}</button>`).join("")}
+       </div>
+       <div class="label" style="margin-top:12px">Output</div>
+       <div class="term" id="st-term">(select an action)</div>`;
   view.innerHTML = `
     <div class="content2">
       <div class="label">Stack — status</div>
       <div id="st-status" class="grid2" style="grid-template-columns:repeat(3,1fr)">Loading…</div>
       <div class="label" style="margin-top:14px">Actions (whitelisted)</div>
-      <div class="row" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">
-        ${STACK_ACTIONS.map(([a, d]) => `<button class="persbtn" data-a="${a}" title="${d}">${a}</button>`).join("")}
-      </div>
-      <div class="label" style="margin-top:12px">Output</div>
-      <div class="term" id="st-term">(select an action)</div>
+      ${actionsBlock}
       <div class="label" style="margin-top:12px">Konnect analytics</div>
       <a class="link" id="dash-link" href="#" target="_blank" rel="noopener">Open the “Cox Automotive: Governed MCP” dashboard in Konnect ↗</a>
     </div>`;
-  const meta = await api.meta();
   const region = meta.region || "us";
   const dash = document.getElementById("dash-link");
   dash.href = meta.dashboardId

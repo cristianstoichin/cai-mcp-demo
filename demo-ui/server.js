@@ -24,7 +24,8 @@ const fail = (res, e) => res.status(500).json({ error: String(e.message || e) })
 app.get("/api/scenarios", (_req, res) => res.json({ scenarios }));
 
 app.get("/api/meta", (_req, res) =>
-  res.json({ dashboardId: config.dashboardId, region: config.konnectRegion }));
+  res.json({ dashboardId: config.dashboardId, region: config.konnectRegion,
+    inContainer: config.inContainer }));
 
 app.post("/api/mcp", async (req, res) => {
   try {
@@ -70,18 +71,24 @@ app.get("/api/registry", async (_req, res) => {
 });
 
 app.get("/api/status", (_req, res) => {
-  exec("docker compose ps --format '{{.Service}}|{{.Status}}'", { cwd: REPO }, (err, stdout) => {
+  // `docker ps` with the compose-project label works both host-side and in-container
+  // (via the mounted socket) — no cwd/compose-file dependency. Excludes demo-ui itself.
+  const cmd = `docker ps --filter label=com.docker.compose.project=cai-mcp-demo ` +
+    `--format '{{.Label "com.docker.compose.service"}}|{{.Status}}'`;
+  exec(cmd, (err, stdout) => {
     if (err) return res.json({ services: [], error: String(err.message) });
-    const services = stdout.trim().split("\n").filter(Boolean).map(line => {
-      const [service, status = ""] = line.split("|");
-      return { service, status, healthy: /healthy|Up/.test(status) };
-    });
+    const services = stdout.trim().split("\n").filter(Boolean)
+      .map(line => { const [service, status = ""] = line.split("|"); return { service, status, healthy: /healthy|Up/.test(status) }; })
+      .filter(s => s.service && s.service !== "demo-ui");
     res.json({ services });
   });
 });
 
 app.get("/api/stack/:action", (req, res) => {
   const { action } = req.params;
+  // Lifecycle/ops actions are host-only — a container must not tear down its own
+  // compose project. Run the cockpit host-side (scripts/ui.sh) for Stack execute.
+  if (config.inContainer) return res.status(400).json({ error: "stack actions are host-only; run scripts/ui.sh on the host" });
   if (!ACTIONS[action]) return res.status(400).json({ error: `action not allowed: ${action}` });
   res.set({ "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" });
   res.flushHeaders();
@@ -94,6 +101,7 @@ app.get("/api/stack/:action", (req, res) => {
   req.on("close", () => { clearInterval(keep); child.kill(); });
 });
 
-app.listen(config.uiPort, "127.0.0.1", () => {
-  console.log(`demo-ui → http://127.0.0.1:${config.uiPort}`);
+app.listen(config.uiPort, config.uiBind, () => {
+  console.log(`demo-ui → http://${config.uiBind}:${config.uiPort}` +
+    (config.inContainer ? " (in-container; Stack execute is host-only)" : ""));
 });

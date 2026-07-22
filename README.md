@@ -116,29 +116,36 @@ Hook Claude Code up to the governed servers:
 ./scripts/claude-code-setup.sh --apply  # or run them
 ```
 
-## demo-ui — the visual cockpit (optional)
+## demo-ui — the visual cockpit
 
-A local, Cox-branded web cockpit that drives the same live stack as `scripts/demo.sh`, but
-**visualizes each governance decision** — a plugin-chain trace (persona → ai-mcp-oauth2 →
-[exchange] → ACL → [OPA] → upstream) that lights green/red, the plain-language "why", the token
-claims (BEFORE/AFTER on the exchange step), and the raw response.
+A Cox-branded web cockpit that drives the same live stack as `scripts/demo.sh`, but **visualizes each
+governance decision** — a plugin-chain trace (persona → ai-mcp-oauth2 → [exchange] → ACL → [OPA] →
+upstream) that lights green/red, the plain-language "why", the token claims (BEFORE/AFTER on the
+exchange step), and the raw response.
+
+Two ways to run it — both serve `http://127.0.0.1:4000`:
 
 ```bash
-scripts/ui.sh            # installs deps on first run, serves http://127.0.0.1:4000
+# 1) All-in-one — it's a Compose service (reaches Kong/Keycloak on the in-network hostnames):
+docker compose up -d                       # brings up the whole stack INCLUDING demo-ui
+
+# 2) Host-run — needed only to drive Stack-mode execute actions (see below):
+scripts/ui.sh                              # Node 20+ host; npm-installs on first run
 ```
 
 Three modes (left nav):
 
 - **Demo** — the scripted 7-step story with a top stepper; pick a persona, ▶ Run, watch the trace.
 - **Explore** — a free sandbox: choose persona + scope override + endpoint + tool + args → Run.
-- **Stack** — live `docker compose` status tiles + whitelisted actions (`up`, `down`, `sync`,
-  `preflight`, `smoke`, `registry-setup`) streamed to a terminal, plus a deep-link to the Konnect
-  "Cox Automotive: Governed MCP" analytics dashboard (set `KONNECT_DASHBOARD_ID` in `.env`).
+- **Stack** — live `docker ps` status tiles + a deep-link to the Konnect "Cox Automotive: Governed MCP"
+  analytics dashboard (set `KONNECT_DASHBOARD_ID` in `.env`). The whitelisted **execute** actions
+  (`up`, `down`, `sync`, `preflight`, `smoke`, `registry-setup`, streamed to a terminal) are **host-only**
+  — they appear when you launch via `scripts/ui.sh`. In the containerized cockpit they're replaced by a
+  note, because a container shouldn't tear down its own compose project.
 
-Host prereq: **Node 20+**. Local-only (binds `127.0.0.1`, no UI auth); all secrets (PAT, client
-secrets) stay server-side and never reach the browser. No build step. The 7 steps are data in
-`demo-ui/scenarios.js` (mirrors `demo.sh`); the response→verdict classifier is `demo-ui/verdict.js`
-(unit-tested, `cd demo-ui && npm test`).
+Local-only (published on `127.0.0.1`, no UI auth); all secrets (PAT, client secrets) stay server-side
+and never reach the browser. No build step. The 7 steps are data in `demo-ui/scenarios.js` (mirrors
+`demo.sh`); the response→verdict classifier is `demo-ui/verdict.js` (unit-tested, `cd demo-ui && npm test`).
 
 ## Repo layout
 

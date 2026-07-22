@@ -157,6 +157,46 @@ services:
           memory: 2G
 
   # ---------------------------------------------------------------------------
+  # demo-ui — Cox-branded cockpit (Demo / Explore / Stack). Reaches Kong + Keycloak
+  # on the in-network hostnames. Published only on 127.0.0.1 (host-local). Secrets
+  # come from .env (server-side; never sent to the browser). Stack execute actions
+  # are host-only in-container — run scripts/ui.sh on the host to drive them.
+  # ---------------------------------------------------------------------------
+  demo-ui:
+    build:
+      context: ./demo-ui
+      target: dev
+    environment:
+      KONG_URL: http://kong-dp:8000
+      KEYCLOAK_BASE: http://keycloak:8080
+      UI_BIND: 0.0.0.0
+      UI_IN_CONTAINER: "1"
+    env_file:
+      - .env
+    ports:
+      # Host-local only (matches the host-run cockpit's 127.0.0.1 binding).
+      - "127.0.0.1:${UI_PORT:-4000}:4000"
+    volumes:
+      # Read-only socket → the Stack view's status tiles (`docker ps`). Not used for
+      # execute actions (those are host-only).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      kong-dp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:4000/api/scenarios',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
   # decK one-shot — syncs kong/konnect.yaml to the Konnect control plane.
   #   docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml
   # ---------------------------------------------------------------------------

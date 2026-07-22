@@ -18,6 +18,13 @@ export const config = {
   registryId:      env.KONNECT_MCP_REGISTRY_ID || "",
   dashboardId:     env.KONNECT_DASHBOARD_ID  || "",
   uiPort:          Number(env.UI_PORT) || 4000,
+  // Host-run binds 127.0.0.1 (local-only). In Compose the container must bind
+  // 0.0.0.0 to be reachable via the published port (compose sets UI_BIND=0.0.0.0
+  // and publishes only on 127.0.0.1 so it stays host-local).
+  uiBind:          env.UI_BIND || "127.0.0.1",
+  // Set by the compose service. In-container, Stack execute actions are disabled
+  // (a container shouldn't tear down its own compose project); status still works.
+  inContainer:     env.UI_IN_CONTAINER === "1",
 };
 
 // Persona Contract — mirrors get-token.sh:46-50.

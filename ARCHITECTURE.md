@@ -47,6 +47,7 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 | `demo-ui/verdict.js` (+ `.test.js`) | Pure response-signature → governance verdict classifier (the one unit-tested module). |
 | `demo-ui/scenarios.js` | The 7 Demo steps as data (single source of truth; mirrors `demo.sh`). |
 | `demo-ui/public/` | Vanilla-JS SPA: `index.html` shell, `app.js` router + Demo/Explore/Stack views, `trace.js` hybrid-panel renderer, `styles.css` (Cox palette via CSS variables). |
+| `demo-ui/Dockerfile` | Multi-stage (mirrors the aegis dashboard). The `demo-ui` compose service reaches Kong/Keycloak on the in-network hostnames; published host-local on `127.0.0.1:4000`; read-only Docker socket for the Stack status tiles. Stack execute actions are host-only (`scripts/ui.sh`). |
 
 ## Kong topology (services → routes → plugins)
 

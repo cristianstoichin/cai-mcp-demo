@@ -28,8 +28,11 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   claude-code-setup, demo (7 steps), preflight (17/17), smoke-test (14/14). README finalized (mermaid,
   walkthrough, troubleshooting, Known Issues). ARCHITECTURE reconciled.
 
-- **demo-ui cockpit — COMPLETE + LIVE-verified (Playwright).** Host-run Node/Express + vanilla-JS SPA,
-  no build step. Launch: `scripts/ui.sh` → http://127.0.0.1:4000 (binds 127.0.0.1; secrets server-side).
+- **demo-ui cockpit — COMPLETE + LIVE-verified (Playwright), now ALSO a Compose service (U9).** Node/
+  Express + vanilla-JS SPA, no build step. Two launch modes, both serve http://127.0.0.1:4000:
+  (a) `docker compose up` — containerized `demo-ui` service, reaches Kong/Keycloak in-network; Stack
+  execute actions host-only (status tiles still work via read-only docker.sock). (b) `scripts/ui.sh` —
+  host-run, full Stack execute. Secrets server-side either way.
   Three modes: Demo (7-step stepper, hybrid trace + token BEFORE/AFTER on the exchange step), Explore
   (free persona/scope/endpoint/tool/args sandbox), Stack (compose status tiles + whitelisted SSE actions
   up/down/sync/preflight/smoke/registry-setup + Konnect dashboard deep-link). verdict.js classifier
