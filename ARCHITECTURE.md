@@ -40,6 +40,13 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 | `scripts/demo.sh` | Numbered, pause-between-steps walkthrough. |
 | `scripts/rebuild.sh` | `docker compose build --no-cache` + force-recreate (D7). |
 | `scripts/preflight.sh` / `smoke-test.sh` | Tool/port/health checks + local static assertions. |
+| `scripts/ui.sh` | Launch the demo-ui cockpit (sources `.env`, `npm install` on first run, runs the host server). |
+| `demo-ui/server.js` | Host-run Express (binds `127.0.0.1`): serves `public/` + the `/api/*` endpoints; secrets stay server-side. |
+| `demo-ui/config.js` | Env-derived config (mirrors the scripts' defaults) + the persona contract. |
+| `demo-ui/keycloak.js` / `kong.js` / `registry.js` / `stack.js` | Thin I/O adapters: token mint/exchange/decode; MCP+REST calls; Konnect registry discovery; whitelisted stack-action SSE runner. |
+| `demo-ui/verdict.js` (+ `.test.js`) | Pure response-signature → governance verdict classifier (the one unit-tested module). |
+| `demo-ui/scenarios.js` | The 7 Demo steps as data (single source of truth; mirrors `demo.sh`). |
+| `demo-ui/public/` | Vanilla-JS SPA: `index.html` shell, `app.js` router + Demo/Explore/Stack views, `trace.js` hybrid-panel renderer, `styles.css` (Cox palette via CSS variables). |
 
 ## Kong topology (services → routes → plugins)
 

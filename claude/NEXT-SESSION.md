@@ -14,15 +14,18 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 
 ## Since last session (2026-07-22)
 
-- **ALL 6 PHASES COMPLETE + verified LIVE against the org.** The demo is fully built and runnable.
-- **Phase 6** — MCP Registry live (cai-mcp-registry, 5 servers published/discoverable); scripts
-  registry-setup + claude-code-setup + demo (7 steps) + preflight (17/17) + smoke-test (14/14); README
-  finalized (mermaid, walkthrough, troubleshooting, Known Issues). Next: run on Cox's org, then merge to main.
-- **Phases 1–5** — REST OIDC gates, REST→MCP conversion (2/2/2-bundled), token-claim ACL, RFC 8693
-  exchange on /mcp/ops, OPA argument policy, passthrough remotes. Details in `handoff/state.md` + NOTES.md.
-- Stack UP (kong-dp, keycloak, dealer-svc, finance-svc, opa, market-mcp). Registry id in `.env`.
-- **NEXT:** run on Cox's org (bootstrap → sync → registry-setup on a Labs org), then merge to `main`.
-  See `handoff/next.md`.
+- **demo-ui cockpit SHIPPED + LIVE-verified.** Cox-branded host-run cockpit (`demo-ui/`, launch with
+  `scripts/ui.sh` → http://127.0.0.1:4000). Demo/Explore/Stack modes drive the real stack and visualize
+  each governance decision (plugin-chain trace + token BEFORE/AFTER + verdict). Verified via Playwright
+  across all three modes; verdict.js 7/7 unit test; 5 signatures re-verified live. Spec
+  `claude/specs/2026-07-22-demo-ui-design.md`, plan `claude/plans/2026-07-22-demo-ui-implementation.md`.
+- **ALL 6 PHASES COMPLETE + verified LIVE** (earlier): REST OIDC gates, REST→MCP conversion, token-claim
+  ACL, RFC 8693 exchange on /mcp/ops, OPA argument policy, passthrough remotes, MCP Registry (5 servers),
+  Konnect analytics dashboard (id 388e3b28-…). Details in `handoff/state.md` + NOTES.md.
+- Stack UP (kong-dp, keycloak, dealer-svc, finance-svc, opa, market-mcp). demo-ui server may be running
+  on :4000 (`lsof -ti :4000`); `.env` gained `UI_PORT` + `KONNECT_DASHBOARD_ID`.
+- **NEXT:** confirm exact Cox palette hex (one-line swap in `demo-ui/public/styles.css`); run the whole
+  demo on Cox's org (bootstrap → sync → registry-setup on a Labs org); then merge to `main`. See `handoff/next.md`.
 
 ## Fragments
 

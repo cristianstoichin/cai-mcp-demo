@@ -28,10 +28,19 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   claude-code-setup, demo (7 steps), preflight (17/17), smoke-test (14/14). README finalized (mermaid,
   walkthrough, troubleshooting, Known Issues). ARCHITECTURE reconciled.
 
+- **demo-ui cockpit — COMPLETE + LIVE-verified (Playwright).** Host-run Node/Express + vanilla-JS SPA,
+  no build step. Launch: `scripts/ui.sh` → http://127.0.0.1:4000 (binds 127.0.0.1; secrets server-side).
+  Three modes: Demo (7-step stepper, hybrid trace + token BEFORE/AFTER on the exchange step), Explore
+  (free persona/scope/endpoint/tool/args sandbox), Stack (compose status tiles + whitelisted SSE actions
+  up/down/sync/preflight/smoke/registry-setup + Konnect dashboard deep-link). verdict.js classifier
+  (7/7 unit test) maps all 5 live signatures; scenarios.js mirrors demo.sh. `.env` gained UI_PORT +
+  KONNECT_DASHBOARD_ID (388e3b28-2162-4d9a-9e17-579045130708). Cox palette approximate (CSS-var swap).
+
 ## Not yet built
-- **NOTHING — the 6-phase build is COMPLETE and live-verified.** Remaining is polish/handoff to Cox:
-  run against their org (bootstrap → sync → registry-setup on a Labs-enabled US org), optional
-  Dev Portal / analytics, and any demo-day narration tweaks.
+- **NOTHING core.** The 6-phase build + Konnect dashboard + demo-ui cockpit are COMPLETE and
+  live-verified. Remaining is polish/handoff to Cox: run against their org (bootstrap → sync →
+  registry-setup on a Labs-enabled US org), confirm exact Cox palette hex (one-line CSS-var swap in
+  `demo-ui/public/styles.css`), and any demo-day narration tweaks.
 
 ## Key gotchas (see NOTES.md)
 - Token exchange: request SCOPES not audience (Keycloak audience param must name a client); subject token

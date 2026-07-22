@@ -50,3 +50,13 @@
   agentic_usage datasource) + scripts/install-dashboard.sh (POST /v2/dashboards, X-Konnect-Beta, CP looked
   up by name, tiles wrapped w/ preset_filters). LIVE-verified: created "Cox Automotive: Governed MCP"
   (id 388e3b28-…), GET returns 6 tiles; generated MCP traffic for the charts. Finding logged in NOTES.md.
+- **2026-07-22** — **demo-ui cockpit** (spec `claude/specs/2026-07-22-demo-ui-design.md`, plan
+  `claude/plans/2026-07-22-demo-ui-implementation.md`). Host-run Node/Express + vanilla-JS SPA, no
+  build step: `demo-ui/` (server.js + config/keycloak/kong/registry/stack adapters + verdict.js +
+  scenarios.js + public/{index,app,trace,styles}); launcher `scripts/ui.sh`. Three modes — Demo
+  (7-step stepper), Explore (free sandbox), Stack (status + whitelisted SSE actions + Konnect
+  dashboard deep-link). LIVE-verified against the running stack via Playwright: Step-1 (401/200/403),
+  Step-4 exchange BEFORE/AFTER token panels, Explore OPA-deny (query_status=overdue), Stack preflight
+  17/17 streamed. All 5 verdict signatures re-verified live through `/api/mcp` (NOTES.md demo-ui block);
+  verdict.js unit test 7/7. Cox palette approximate (CSS-var swap). `.env` gained UI_PORT +
+  KONNECT_DASHBOARD_ID (=388e3b28-2162-4d9a-9e17-579045130708 for this org).

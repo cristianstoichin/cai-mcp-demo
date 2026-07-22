@@ -116,6 +116,30 @@ Hook Claude Code up to the governed servers:
 ./scripts/claude-code-setup.sh --apply  # or run them
 ```
 
+## demo-ui — the visual cockpit (optional)
+
+A local, Cox-branded web cockpit that drives the same live stack as `scripts/demo.sh`, but
+**visualizes each governance decision** — a plugin-chain trace (persona → ai-mcp-oauth2 →
+[exchange] → ACL → [OPA] → upstream) that lights green/red, the plain-language "why", the token
+claims (BEFORE/AFTER on the exchange step), and the raw response.
+
+```bash
+scripts/ui.sh            # installs deps on first run, serves http://127.0.0.1:4000
+```
+
+Three modes (left nav):
+
+- **Demo** — the scripted 7-step story with a top stepper; pick a persona, ▶ Run, watch the trace.
+- **Explore** — a free sandbox: choose persona + scope override + endpoint + tool + args → Run.
+- **Stack** — live `docker compose` status tiles + whitelisted actions (`up`, `down`, `sync`,
+  `preflight`, `smoke`, `registry-setup`) streamed to a terminal, plus a deep-link to the Konnect
+  "Cox Automotive: Governed MCP" analytics dashboard (set `KONNECT_DASHBOARD_ID` in `.env`).
+
+Host prereq: **Node 20+**. Local-only (binds `127.0.0.1`, no UI auth); all secrets (PAT, client
+secrets) stay server-side and never reach the browser. No build step. The 7 steps are data in
+`demo-ui/scenarios.js` (mirrors `demo.sh`); the response→verdict classifier is `demo-ui/verdict.js`
+(unit-tested, `cd demo-ui && npm test`).
+
 ## Repo layout
 
 - `dealer-svc/`, `finance-svc/` — Node/Express mock REST APIs (converted to MCP tools).
@@ -126,7 +150,8 @@ Hook Claude Code up to the governed servers:
 - `konnect/mcp-registry/*.json` — registry create + publish bodies.
 - `konnect/dashboards/cai-mcp-analytics.json` — the Konnect "Governed MCP" analytics dashboard.
 - `scripts/` — `konnect-bootstrap`, `get-token`, `rebuild`, `registry-setup`, `install-dashboard`,
-  `claude-code-setup`, `demo`, `preflight`, `smoke-test`.
+  `claude-code-setup`, `demo`, `preflight`, `smoke-test`, `ui` (launches the demo-ui cockpit).
+- `demo-ui/` — host-run Node/Express + vanilla-JS cockpit (server.js + adapters + `public/` SPA).
 - `NOTES.md` — doc-vs-reality findings + verified plugin-schema facts (trust this over memory).
 
 ## Troubleshooting
