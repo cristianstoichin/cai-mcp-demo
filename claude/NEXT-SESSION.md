@@ -5,17 +5,22 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 - **Branch:** `feat/cai-mcp-demo-build` (build in progress; merge to `main` when demo verified end-to-end)
 - **Design spec:** `claude/specs/2026-07-22-cai-mcp-demo-design.md`
 - **Plan:** `claude/plans/2026-07-22-cai-mcp-demo-implementation.md` (6 phases)
-- **Dev loop:** edit → `./scripts/rebuild.sh <svc>` (always `--no-cache`) → verify
-- **Local stack (no Konnect):** `docker compose up -d keycloak dealer-svc finance-svc`
-- **Token:** `./scripts/get-token.sh <dana|frank|olivia>`
+- **Konnect:** live CP `cai-mcp-demo` (id `007f4c01-74b6-44ff-810e-4620e01be51b`), region `us`.
+  Shared PAT is in `~/workspace/github/aegis-insurance-ai-gateway-demo/secrets.env` (`DECK_KONNECT_TOKEN`).
+  `.env` is already populated (gitignored); `certs/` already generated + pinned.
+- **Dev loop:** edit → `./scripts/rebuild.sh <svc>` (always `--no-cache`) → `deck ... gateway sync` → verify LIVE
+- **Sync:** `docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml`
+- **Token:** `./scripts/get-token.sh <dana|frank|olivia> [scope-override] [--raw]`
 
 ## Since last session (2026-07-22)
 
-- Repo initialized; design spec + phased plan committed.
-- **Phase 1 COMPLETE + verified locally:** dealer-svc/finance-svc (Cox mock APIs, header-logging),
-  Keycloak `cox-auto` realm (scopes/groups/users/3 clients), compose subset, `.env.example`,
-  `get-token.sh`, `rebuild.sh`. Tokens mint with correct `sub`/`preferred_username`/`groups`/`aud`.
-- Verified all AI-MCP plugin schemas against developer.konghq.com (see NOTES.md).
+- **Phases 1–4 COMPLETE + verified LIVE against the org.** DP connected; deck sync clean; OIDC matrix
+  401/200/403; MCP tools/list = 2/2/2-bundled; tools/call round-trips; **aegis-style token-claim tool
+  ACL** (allow/deny matrix correct); X-User-* forwarded.
+- **ACL approach changed at Paul's request:** reverted D4 → aegis scope/claim ACL (`acl_attribute_type:
+  oauth_access_token` + `access_token_claim_field: groups`); no Kong consumers. See DECISIONS.md.
+- Stack is currently UP (kong-dp, keycloak, dealer-svc, finance-svc). market-mcp/opa not built yet.
+- **NEXT: Phase 5** — token_exchange + OPA on /mcp/ops, local market-mcp, two passthrough remote routes.
 
 ## Fragments
 
