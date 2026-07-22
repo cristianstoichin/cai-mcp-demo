@@ -1,0 +1,108 @@
+<h2>How should the cockpit visualize a governance decision?</h2>
+<p class="subtitle">Same scenario in both: <strong>frank (finance)</strong> calls <strong>list_dealer_customers</strong> on <strong>/mcp/ops</strong> → Kong denies. Which framing lands the value better for a live Cox audience? Pick one (or mix).</p>
+
+<style>
+  .appwin{border:1px solid var(--border,#3333);border-radius:10px;overflow:hidden;background:#0d1117;color:#e6edf3;font-size:12px}
+  .appbar{display:flex;gap:6px;align-items:center;padding:6px 10px;background:#161b22;border-bottom:1px solid #30363d;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .appbody{display:flex;min-height:340px}
+  .nav{width:120px;background:#0d1117;border-right:1px solid #30363d;padding:8px;display:flex;flex-direction:column;gap:4px}
+  .navitem{padding:5px 7px;border-radius:6px;color:#8b949e}
+  .navitem.on{background:#1f6feb22;color:#58a6ff;font-weight:600}
+  .main{flex:1;padding:10px 12px;overflow:auto}
+  .chip{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
+  .ok{background:#238636;color:#fff}.deny{background:#da3633;color:#fff}.warn{background:#9e6a03;color:#fff}.muted{background:#30363d;color:#c9d1d9}
+  .node{border:1px solid #30363d;border-radius:8px;padding:7px 9px;background:#161b22;text-align:center;min-width:70px}
+  .node.pass{border-color:#238636}.node.fail{border-color:#da3633;box-shadow:0 0 0 2px #da363340}
+  .arrow{color:#6e7681;align-self:center;font-size:16px}
+  .kv{font-family:ui-monospace,monospace;font-size:11px;line-height:1.7}
+  .kv .k{color:#7ee787}.kv .p{color:#79c0ff}
+  .persbtn{display:inline-block;padding:3px 8px;border-radius:6px;border:1px solid #30363d;margin-right:4px;font-size:11px}
+  .persbtn.sel{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .panel{border:1px solid #30363d;border-radius:8px;padding:9px;background:#161b22;margin-top:8px}
+  .why{border-left:3px solid #da3633;padding:6px 9px;background:#da363318;border-radius:4px;margin-top:8px}
+</style>
+
+<div class="split">
+
+  <!-- ============ OPTION A: PLUGIN-CHAIN TRACE ============ -->
+  <div class="mockup">
+    <div class="mockup-header">A · Plugin-chain trace — "watch it flow through Kong"</div>
+    <div class="appwin">
+      <div class="appbar"><span class="dot" style="background:#da3633"></span><span class="dot" style="background:#f0b429"></span><span class="dot" style="background:#238636"></span>&nbsp; Cox · Governed MCP</div>
+      <div class="appbody">
+        <div class="nav">
+          <div class="navitem on">▷ Demo</div>
+          <div class="navitem">⌕ Explore</div>
+          <div class="navitem">⚙ Stack</div>
+        </div>
+        <div class="main">
+          <div class="label">STEP 3 / 7 · TOKEN-CLAIM ACL</div>
+          <div style="margin:6px 0"><span class="persbtn">dana</span><span class="persbtn sel">frank</span><span class="persbtn">olivia</span> → <code>list_dealer_customers</code> @ <code>/mcp/ops</code></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+            <div class="node"><div>👤 frank</div><div class="chip muted">groups: finance</div></div>
+            <div class="arrow">→</div>
+            <div class="node pass"><div>ai-mcp-oauth2</div><div class="chip ok">token ✓</div></div>
+            <div class="arrow">→</div>
+            <div class="node fail"><div>tool ACL</div><div class="chip deny">DENY</div></div>
+            <div class="arrow">→</div>
+            <div class="node" style="opacity:.4"><div>upstream</div><div class="chip muted">—</div></div>
+          </div>
+          <div class="why"><strong>403 Forbidden.</strong> tool <code>list_dealer_customers</code> allows <code>[dealers, ops]</code>; frank's token carries <code>groups:[finance]</code>. Blocked at the gateway — never reached the API.</div>
+          <div class="panel kv"><span class="k">"groups"</span>: [<span class="p">"finance"</span>],<br><span class="k">"scope"</span>: <span class="p">"finance:read mcp:use"</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ OPTION B: REQUEST / RESPONSE CONSOLE ============ -->
+  <div class="mockup">
+    <div class="mockup-header">B · Request/Response console — "API-console familiar"</div>
+    <div class="appwin">
+      <div class="appbar"><span class="dot" style="background:#da3633"></span><span class="dot" style="background:#f0b429"></span><span class="dot" style="background:#238636"></span>&nbsp; Cox · Governed MCP</div>
+      <div class="appbody">
+        <div class="nav">
+          <div class="navitem on">▷ Demo</div>
+          <div class="navitem">⌕ Explore</div>
+          <div class="navitem">⚙ Stack</div>
+        </div>
+        <div class="main" style="display:flex;flex-direction:column;gap:8px">
+          <div class="label">STEP 3 / 7 · TOKEN-CLAIM ACL</div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1">
+              <div class="label">REQUEST</div>
+              <div class="panel kv">POST <span class="p">/mcp/ops</span><br>persona <span class="p">frank</span><br><span class="k">tool</span>: list_dealer_customers</div>
+            </div>
+            <div style="flex:1">
+              <div class="label">RESPONSE</div>
+              <div class="panel"><span class="chip deny">403</span> <span class="chip warn">ACL</span><div class="kv" style="margin-top:6px">{ <span class="k">"error"</span>: <span class="p">"Forbidden"</span> }</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="label">GOVERNANCE VERDICT</div>
+            <div class="panel">
+              <div>auth <span class="chip ok">pass</span> &nbsp; tool ACL <span class="chip deny">deny</span> &nbsp; opa <span class="chip muted">n/a</span></div>
+              <div class="why" style="margin-top:6px">allow <code>[dealers, ops]</code> vs token <code>groups:[finance]</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Plugin-chain trace</h3><p>Horizontal flow of nodes (persona → ai-mcp-oauth2 → ACL → exchange → OPA → upstream) that light green/red. Teaches "governance happens IN the gateway" — great for the exchange & OPA steps too.</p></div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Request / Response console</h3><p>Familiar API-console split with a compact "verdict" strip of badges. Lower novelty, very legible, closest to what devs already know.</p></div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Hybrid: trace on top, req/resp below</h3><p>The flow diagram as the hero, with an expandable request/response + raw token panel underneath for the detail-oriented. Best of both; a bit more screen real estate.</p></div>
+  </div>
+</div>

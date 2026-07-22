@@ -1,0 +1,104 @@
+<h2>Full Demo-mode screen — hybrid viz on the token-exchange step</h2>
+<p class="subtitle">Scenario: <strong>olivia</strong> with an <strong>mcp:use-only</strong> token calls <code>list_dealer_customers</code> on <code>/mcp/ops</code>. Kong introspects it, <strong>exchanges</strong> it for a token that carries the API audiences, then it passes. Two questions below: does this layout work, and which step-navigation pattern?</p>
+
+<style>
+  .appwin{border:1px solid #30363d;border-radius:10px;overflow:hidden;background:#0d1117;color:#e6edf3;font-size:12px}
+  .appbar{display:flex;gap:6px;align-items:center;padding:6px 10px;background:#161b22;border-bottom:1px solid #30363d;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .appbody{display:flex;min-height:420px}
+  .nav{width:110px;background:#0d1117;border-right:1px solid #30363d;padding:8px;display:flex;flex-direction:column;gap:4px}
+  .navitem{padding:5px 7px;border-radius:6px;color:#8b949e}
+  .navitem.on{background:#1f6feb22;color:#58a6ff;font-weight:600}
+  .main{flex:1;padding:0;overflow:auto;display:flex;flex-direction:column}
+  /* top stepper */
+  .stepper{display:flex;gap:0;border-bottom:1px solid #30363d;background:#0d1117}
+  .step{flex:1;text-align:center;padding:6px 2px;font-size:9px;color:#6e7681;border-right:1px solid #21262d;position:relative}
+  .step.done{color:#3fb950}.step.cur{color:#fff;background:#1f6feb22;font-weight:700;box-shadow:inset 0 -2px 0 #1f6feb}
+  .step .n{display:block;font-size:13px;font-weight:700}
+  .content2{padding:10px 12px;flex:1}
+  .chip{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
+  .ok{background:#238636;color:#fff}.deny{background:#da3633;color:#fff}.warn{background:#9e6a03;color:#fff}.muted{background:#30363d;color:#c9d1d9}.new{background:#8957e5;color:#fff}
+  .node{border:1px solid #30363d;border-radius:8px;padding:6px 8px;background:#161b22;text-align:center;min-width:58px;font-size:10px}
+  .node.pass{border-color:#238636}.node.exch{border-color:#8957e5;box-shadow:0 0 0 2px #8957e540}
+  .arrow{color:#6e7681;align-self:center}
+  .kv{font-family:ui-monospace,monospace;font-size:10.5px;line-height:1.6}
+  .kv .k{color:#7ee787}.kv .p{color:#79c0ff}.kv .add{color:#8957e5;font-weight:700}
+  .persbtn{display:inline-block;padding:3px 8px;border-radius:6px;border:1px solid #30363d;margin-right:4px;font-size:11px}
+  .persbtn.sel{background:#1f6feb;border-color:#1f6feb;color:#fff}
+  .panel{border:1px solid #30363d;border-radius:8px;padding:8px;background:#161b22}
+  .why{border-left:3px solid #8957e5;padding:6px 9px;background:#8957e518;border-radius:4px}
+  .runbtn{background:#238636;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-weight:700;font-size:11px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .label{font-size:9px;letter-spacing:.08em;color:#8b949e;text-transform:uppercase;margin-bottom:3px}
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Preview: Demo mode — Step 4 (RFC 8693 token exchange)</div>
+  <div class="appwin">
+    <div class="appbar"><span class="dot" style="background:#da3633"></span><span class="dot" style="background:#f0b429"></span><span class="dot" style="background:#238636"></span>&nbsp; Cox Automotive · Governed MCP on Kong AI Gateway</div>
+    <div class="appbody">
+      <div class="nav">
+        <div class="navitem on">▷ Demo</div>
+        <div class="navitem">⌕ Explore</div>
+        <div class="navitem">⚙ Stack</div>
+      </div>
+      <div class="main">
+        <div class="stepper">
+          <div class="step done"><span class="n">1</span>OIDC</div>
+          <div class="step done"><span class="n">2</span>Convert</div>
+          <div class="step done"><span class="n">3</span>ACL</div>
+          <div class="step cur"><span class="n">4</span>Exchange</div>
+          <div class="step"><span class="n">5</span>OPA</div>
+          <div class="step"><span class="n">6</span>Remote</div>
+          <div class="step"><span class="n">7</span>Registry</div>
+        </div>
+        <div class="content2">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><span class="persbtn">dana</span><span class="persbtn sel">olivia</span><span class="persbtn">frank</span> <span style="color:#8b949e">scope:</span> <code>mcp:use only</code></div>
+            <button class="runbtn">▶ Run call</button>
+          </div>
+
+          <div class="label" style="margin-top:10px">Request flow through Kong</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <div class="node"><div>👤 olivia</div><span class="chip muted">no api aud</span></div>
+            <div class="arrow">→</div>
+            <div class="node pass"><div>oauth2</div><span class="chip ok">introspect ✓</span></div>
+            <div class="arrow">→</div>
+            <div class="node exch"><div>exchange</div><span class="chip new">＋token</span></div>
+            <div class="arrow">→</div>
+            <div class="node pass"><div>ACL</div><span class="chip ok">ops ✓</span></div>
+            <div class="arrow">→</div>
+            <div class="node pass"><div>OPA</div><span class="chip ok">allow</span></div>
+            <div class="arrow">→</div>
+            <div class="node pass"><div>dealer-svc</div><span class="chip ok">200</span></div>
+          </div>
+
+          <div class="why" style="margin-top:10px"><strong>Token exchanged (RFC 8693).</strong> The incoming token had no <code>dealer-api</code> audience — on <code>/mcp/ops</code> Kong swaps it for one that does, so the inner gate passes. On <code>/mcp/dealers</code> (no exchange) the same token 403s.</div>
+
+          <div class="grid2" style="margin-top:10px">
+            <div><div class="label">Token BEFORE</div><div class="panel kv"><span class="k">aud</span>:[<span class="p">mcp-ops, kong-exchange</span>]<br><span class="k">scope</span>:<span class="p">mcp:use</span><br><span class="k">groups</span>:[<span class="p">ops</span>]</div></div>
+            <div><div class="label">Token AFTER exchange</div><div class="panel kv"><span class="add">aud</span>:[<span class="add">dealer-api, finance-api</span>]<br><span class="add">scope</span>:<span class="add">dealers:read finance:read</span><br><span class="k">groups</span>:[<span class="p">ops</span>]</div></div>
+          </div>
+          <div class="label" style="margin-top:8px">Response · 200</div>
+          <div class="panel kv">{ <span class="k">"count"</span>:5, <span class="k">"customers"</span>:[ {<span class="p">"name"</span>:"Marcus Bell", <span class="p">"dealership"</span>:"Sunrise Ford"… } ] }</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Which step-navigation pattern?</h3>
+<div class="options">
+  <div class="option" data-choice="stepper" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Top stepper (shown above)</h3><p>All 7 steps visible as a progress bar; click any to jump, done-steps go green. Audience always sees where you are in the story. My recommendation.</p></div>
+  </div>
+  <div class="option" data-choice="prevnext" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Slide-deck prev/next</h3><p>One big scenario at a time with ◀ / ▶ buttons; minimal chrome, most "presentation-like." You lose the at-a-glance map of all 7.</p></div>
+  </div>
+  <div class="option" data-choice="leftlist" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Left scenario list</h3><p>The 7 steps as a vertical list in a second sidebar. More room for long titles, but eats horizontal space the trace wants.</p></div>
+  </div>
+</div>
