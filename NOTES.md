@@ -253,16 +253,21 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - ✅ All 5 verdict signatures reproduced through the demo-ui server (`POST /api/mcp`) against the
   running stack, and `verdict.js classify()` matches every one:
   - `401` + `{"message":"Unauthorized"}`  → **auth-fail** (ai-mcp-oauth2 gate; no/invalid token).
-  - `403` + `{"message":"Forbidden"}` (Kong JSON)  → **acl-deny** (MCP tool ACL; also the REST OIDC
-    scope/aud gate — same 403 shape, distinguished from OPA by body ≠ `unauthorized`).
+  - `403` (body ≠ `{"message":"unauthorized"}`)  → **acl-deny**. Verified live there are TWO body
+    shapes for this: the **REST OIDC** scope/aud gate returns JSON `{"message":"Forbidden"}` (Step 1),
+    while the **MCP tool ACL** deny returns raw HTML `<html>…403 Forbidden…</html>` (Step 3). The
+    classifier keys off "403 that is NOT `{"message":"unauthorized"}`", so both shapes classify as
+    acl-deny; only OPA's `{"message":"unauthorized"}` is special-cased. (The spec table's "HTML body"
+    was right for the MCP ACL; the REST gate is JSON.)
   - `403` + `{"message":"unauthorized"}`  → **opa-deny** (external OPA policy).
   - `200` + JSON-RPC `isError:true`, text `HTTP call failed with status 403`  → **inner-gate-deny**
     (the token lacks the API audience; the case token-exchange fixes on /mcp/ops). MUST read the body,
     not the status.
   - `200` + `result.content`/`result.tools`  → **allow**.
-- 🔧 The Kong 403 ACL body is JSON `{"message":"Forbidden"}` (not raw HTML as the spec table phrased
-  it) — the classifier keys off "403 that is NOT `{"message":"unauthorized"}`", so both forms classify
-  as acl-deny correctly. No code change needed; noted for accuracy.
+- 🔧 Two distinct 403 body shapes (both → acl-deny, verified via Playwright): REST OIDC gate = JSON
+  `{"message":"Forbidden"}`; MCP tool-ACL = raw HTML `403 Forbidden`. The classifier is shape-agnostic
+  (any 403 that isn't OPA's `{"message":"unauthorized"}`), so no code change needed. (Supersedes an
+  earlier draft note that claimed the ACL body was only JSON.)
 - ✅ Exchange BEFORE/AFTER reproduced out-of-band (`/api/exchange-preview`, U7): mcp:use-only token
   aud=[mcp-finance,mcp-ops,kong-exchange,mcp-dealers] → after aud=[dealer-api,finance-api],
   scope=dealers:read finance:read, groups=[ops] retained, azp flips demo-cli→kong-exchange.
