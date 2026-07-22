@@ -63,6 +63,19 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   (NOT the aegis README's stale `us.api.konghq.com/v2`). Paths: create `POST /v0/mcp-registries`,
   publish `POST /{id}/v0.1/publish`, discover `GET /{id}/v0.1/servers`. US region only; Labs tech preview.
 
+## Build findings (Konnect dashboard) — verified LIVE against org
+- ✅ **Upload = `POST /v2/dashboards` with header `X-Konnect-Beta: true`.** Envelope:
+  `{name, labels, definition:{preset_filters:[{field:control_plane,operator:in,value:[<cp_id>]}], tiles[]}}`.
+  Strip each tile's `id` before POST (Konnect assigns them). Created "Cox Automotive: Governed MCP"
+  (id 388e3b28-…) live; GET returns all 6 tiles. Mirrors aegis `konnect/dashboards/mcp-analytics.json`.
+- ✅ **MCP tile schema**: `definition.chart.{type,chart_title}` + `definition.query.{datasource, metrics[],
+  dimensions[], filters[], limit?}`. Chart types used: `single_value`, `donut`, `top_n`, `horizontal_bar`,
+  `timeseries_line`. Datasource **`agentic_usage`**; dimensions `mcp_tool_name` / `gateway_service`; metrics
+  `request_count`, `response_latency_average`, `upstream_latency_average`, `error_rate` (error_rate = the
+  governance-denial signal). Charts populate only after MCP traffic flows + Konnect ingests it (short delay).
+- ⚠️ Advanced Analytics + the `agentic_usage` datasource are org-tier/region dependent; the beta dashboards
+  API needs the `X-Konnect-Beta` header. Script prints a helpful message on failure.
+
 ## Build findings (Phase 6.1 — MCP Registry) — verified LIVE against org
 - ✅ Registry create/publish/discover paths confirmed live: `POST /v0/mcp-registries` (create body
   `{name, display_name, description}`), `POST /{id}/v0.1/publish` (server manifest), `GET /{id}/v0.1/servers`

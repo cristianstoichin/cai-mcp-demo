@@ -18,6 +18,7 @@ Konnect MCP Registry. One `docker compose up` runs everything except the Konnect
 | 6 | **External OPA policy** — argument-level rule the tool ACL can't express; hot-reloads with no Kong sync | `/mcp/ops` + `opa/policies/mcp.rego` |
 | 7 | **Passthrough governance** — front an MCP server you own *and* a third-party one you don't | `/mcp/remote` → market-mcp, `/mcp/remote-public` → DeepWiki |
 | 8 | **MCP Registry** — publish + discover the servers in Konnect | `scripts/registry-setup.sh` |
+| 9 | **Konnect analytics dashboard** — MCP volume, per-server split, error/denial rate, latency | `scripts/install-dashboard.sh` |
 
 Identity: Keycloak `cox-auto` realm, personas **dana** (dealers), **frank** (finance), **olivia** (ops, both groups).
 
@@ -123,8 +124,9 @@ Hook Claude Code up to the governed servers:
 - `kong/konnect.yaml` — the entire declarative decK config.
 - `opa/policies/mcp.rego` — external policy for `/mcp/ops`.
 - `konnect/mcp-registry/*.json` — registry create + publish bodies.
-- `scripts/` — `konnect-bootstrap`, `get-token`, `rebuild`, `registry-setup`, `claude-code-setup`,
-  `demo`, `preflight`, `smoke-test`.
+- `konnect/dashboards/cai-mcp-analytics.json` — the Konnect "Governed MCP" analytics dashboard.
+- `scripts/` — `konnect-bootstrap`, `get-token`, `rebuild`, `registry-setup`, `install-dashboard`,
+  `claude-code-setup`, `demo`, `preflight`, `smoke-test`.
 - `NOTES.md` — doc-vs-reality findings + verified plugin-schema facts (trust this over memory).
 
 ## Troubleshooting

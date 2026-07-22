@@ -45,3 +45,8 @@
 - **2026-07-22** — Phase 6.3: README finalized (mermaid, walkthrough w/ expected outputs, troubleshooting,
   Known Issues); ARCHITECTURE.md reconciled to token-claim ACL + OPA argument rule + 5 registry servers;
   all NOTES.md doc-verify items closed. **Phase 6 COMPLETE — full 6-phase build done + live-verified.**
+- **2026-07-22** — Konnect analytics dashboard: konnect/dashboards/cai-mcp-analytics.json (6 tiles —
+  MCP volume, calls by server, top servers w/ error/denial rate, avg latency, tool usage, latency-by-tool;
+  agentic_usage datasource) + scripts/install-dashboard.sh (POST /v2/dashboards, X-Konnect-Beta, CP looked
+  up by name, tiles wrapped w/ preset_filters). LIVE-verified: created "Cox Automotive: Governed MCP"
+  (id 388e3b28-…), GET returns 6 tiles; generated MCP traffic for the charts. Finding logged in NOTES.md.
