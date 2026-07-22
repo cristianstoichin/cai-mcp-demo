@@ -1,0 +1,161 @@
+name: cai-mcp-demo
+
+# =============================================================================
+# One `docker compose up` runs everything except Konnect (the control plane is
+# SaaS). Prereq: fill .env, then `scripts/konnect-bootstrap.sh` to create the CP
+# and write ./certs/{tls.crt,tls.key}. Phase 1 (no Kong yet) can run the subset:
+#   docker compose up -d keycloak dealer-svc finance-svc
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Identity — Keycloak 26, realm fully pre-baked (zero manual clicks).
+  # ---------------------------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # Keycloak UBI image has no curl; use bash /dev/tcp to confirm 8080 is accepting.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ---------------------------------------------------------------------------
+  # Upstream REST services (Kong converts these to MCP tools).
+  # ---------------------------------------------------------------------------
+  dealer-svc:
+    build:
+      context: ./dealer-svc
+    ports:
+      # Host debug port only (real traffic goes through Kong :8000). Override in
+      # .env if the port collides with a local dev server. Internal port is 3000.
+      - "${DEALER_SVC_PORT:-3001}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  finance-svc:
+    build:
+      context: ./finance-svc
+    ports:
+      - "${FINANCE_SVC_PORT:-3002}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # Local Cox-themed MCP server — passthrough-listener target for /mcp/remote (Phase 5).
+  # ---------------------------------------------------------------------------
+  market-mcp:
+    build:
+      context: ./market-mcp
+    ports:
+      - "${MARKET_MCP_PORT:-3003}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # OPA — external policy for /mcp/ops (Phase 5).
+  # ---------------------------------------------------------------------------
+  opa:
+    image: openpolicyagent/opa:1.4.2
+    command: ["run", "--server", "--addr", ":8181", "--log-level", "info", "./policies"]
+    volumes:
+      - ./opa/policies:/policies:ro
+    ports:
+      - "8181:8181"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # Kong Gateway — Konnect hybrid data plane. Needs ./certs from bootstrap.
+  # ---------------------------------------------------------------------------
+  kong-dp:
+    image: kong/kong-gateway:3.14.0.2
+    environment:
+      KONG_ROLE: data_plane
+      KONG_DATABASE: "off"
+      KONG_VITALS: "off"
+      KONG_CLUSTER_MTLS: pki
+      KONG_KONNECT_MODE: "on"
+      KONG_ROUTER_FLAVOR: expressions
+      KONG_LUA_SSL_TRUSTED_CERTIFICATE: system
+      KONG_CLUSTER_CONTROL_PLANE: ${KONNECT_CP_ENDPOINT}
+      KONG_CLUSTER_SERVER_NAME: ${KONNECT_CP_SERVER_NAME}
+      KONG_CLUSTER_TELEMETRY_ENDPOINT: ${KONNECT_TP_ENDPOINT}
+      KONG_CLUSTER_TELEMETRY_SERVER_NAME: ${KONNECT_TP_SERVER_NAME}
+      KONG_CLUSTER_CERT: /etc/secrets/kong-cluster-cert/tls.crt
+      KONG_CLUSTER_CERT_KEY: /etc/secrets/kong-cluster-cert/tls.key
+      KONG_PROXY_LISTEN: "0.0.0.0:8000, 0.0.0.0:8443 ssl"
+      KONG_LOG_LEVEL: info
+    volumes:
+      - ${CERT_HOST_DIR:-./certs}:/etc/secrets/kong-cluster-cert:ro
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # ---------------------------------------------------------------------------
+  # decK one-shot — syncs kong/konnect.yaml to the Konnect control plane.
+  #   docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml
+  # ---------------------------------------------------------------------------
+  deck:
+    image: kong/deck:v1.53.0
+    entrypoint: ["deck"]
+    command: ["gateway", "sync", "/config/konnect.yaml"]
+    environment:
+      DECK_KONNECT_TOKEN: ${KONNECT_TOKEN}
+      DECK_KONNECT_CONTROL_PLANE_NAME: ${KONNECT_CONTROL_PLANE_NAME}
+      DECK_KONNECT_ADDR: https://${KONNECT_REGION:-us}.api.konghq.com
+    volumes:
+      - ./kong:/config:ro
+    profiles: ["tools"]

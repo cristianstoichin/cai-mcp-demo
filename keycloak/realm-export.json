@@ -1,0 +1,323 @@
+{
+  "realm": "cox-auto",
+  "enabled": true,
+  "displayName": "Cox Automotive (cai-mcp-demo)",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 36000,
+  "groups": [
+    {
+      "name": "dealers"
+    },
+    {
+      "name": "finance"
+    },
+    {
+      "name": "ops"
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "identity",
+      "description": "Always-on identity claims: sub + preferred_username (ai-mcp-oauth2 consumer mapping depends on these). Self-owned so it does not rely on Keycloak's built-in basic/profile scopes being linked on import.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "preferred_username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "groups",
+      "description": "Emits realm group memberships in the `groups` claim.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dealers:read",
+      "description": "Read access to the dealer API; adds the dealer-api audience.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "aud-dealer-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "dealer-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "finance:read",
+      "description": "Read access to the finance API; adds the finance-api audience.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "aud-finance-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "finance-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp:use",
+      "description": "Access to the governed MCP endpoints; adds the mcp-* audiences and the kong-exchange audience required for RFC 8693 token exchange.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "aud-mcp-dealers",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp-dealers",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "aud-mcp-finance",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp-finance",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "aud-mcp-ops",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "mcp-ops",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        },
+        {
+          "name": "aud-kong-exchange",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "kong-exchange",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "demo-cli",
+      "name": "Demo CLI (confidential, direct grant)",
+      "description": "Confidential client for curl/ROPC demos via scripts/get-token.sh.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "demo-cli-secret-change-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "defaultClientScopes": [
+        "basic",
+        "identity",
+        "groups"
+      ],
+      "optionalClientScopes": [
+        "dealers:read",
+        "finance:read",
+        "mcp:use"
+      ]
+    },
+    {
+      "clientId": "claude-code",
+      "name": "Claude Code (public, PKCE)",
+      "description": "Public client for Claude Code MCP OAuth (authorization code + PKCE).",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:*",
+        "http://127.0.0.1:*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "identity",
+        "groups"
+      ],
+      "optionalClientScopes": [
+        "dealers:read",
+        "finance:read",
+        "mcp:use"
+      ]
+    },
+    {
+      "clientId": "kong-exchange",
+      "name": "Kong Exchange (confidential; introspection + RFC 8693)",
+      "description": "Confidential client Kong uses for token introspection and standard token exchange (V2).",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "kong-exchange-secret-change-me",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "attributes": {
+        "standard.token.exchange.enabled": "true"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "identity",
+        "groups"
+      ],
+      "optionalClientScopes": [
+        "dealers:read",
+        "finance:read",
+        "mcp:use"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "dana.dealer",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "dana.dealer@cox-auto.demo",
+      "firstName": "Dana",
+      "lastName": "Dealer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo1234!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/dealers"
+      ]
+    },
+    {
+      "username": "frank.finance",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "frank.finance@cox-auto.demo",
+      "firstName": "Frank",
+      "lastName": "Finance",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo1234!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/finance"
+      ]
+    },
+    {
+      "username": "olivia.ops",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "olivia.ops@cox-auto.demo",
+      "firstName": "Olivia",
+      "lastName": "Ops",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Demo1234!",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/ops"
+      ]
+    }
+  ]
+}
