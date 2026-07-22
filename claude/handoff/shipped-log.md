@@ -37,3 +37,11 @@
   passthrough_credentials:false — internal token not leaked to remotes); upstreams via decK url: shorthand
   from .env. LIVE-verified: both 401 unauth; /mcp/remote tools/list+tools/call returns market data;
   /mcp/remote-public proxies DeepWiki (protocol 2025-06-18, stateless) tools/list. **Phase 5 COMPLETE.**
+- **2026-07-22** — Phase 6.1: MCP Registry. konnect/mcp-registry/ (create + 5 publish bodies) +
+  registry-setup.sh (idempotent create → publish → discover). LIVE-verified against org: cai-mcp-registry
+  created, all 5 servers published + discoverable. Found publish description ≤100 chars (NOTES.md).
+- **2026-07-22** — Phase 6.2: scripts. demo.sh (7-step walkthrough), claude-code-setup.sh (5 mcp-add
+  lines), preflight.sh, smoke-test.sh. LIVE: preflight 17/17, smoke 14/14, demo clean end-to-end.
+- **2026-07-22** — Phase 6.3: README finalized (mermaid, walkthrough w/ expected outputs, troubleshooting,
+  Known Issues); ARCHITECTURE.md reconciled to token-claim ACL + OPA argument rule + 5 registry servers;
+  all NOTES.md doc-verify items closed. **Phase 6 COMPLETE — full 6-phase build done + live-verified.**

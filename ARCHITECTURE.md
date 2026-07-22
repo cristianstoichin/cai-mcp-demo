@@ -9,7 +9,8 @@ MCP servers. One `docker compose up` runs everything except the Konnect control 
 MCP client (curl / Claude Code)                Konnect control plane (SaaS)
         │  Bearer (Keycloak JWT)                        │  config push (decK sync)
         ▼                                               ▼
-  Kong DP :8000  ──ai-mcp-oauth2──▶ consumer/group map, token exchange, OPA
+  Kong DP :8000  ──ai-mcp-oauth2──▶ token validation, token exchange (RFC 8693), OPA
+                 ──ai-mcp-proxy───▶ token-claim tool ACL (groups claim; no Kong consumers)
         │                                               
         ├─ /mcp/dealers|finance|ops   (ai-mcp-proxy listener, aggregate by tag)
         ├─ /mcp/remote|remote-public  (ai-mcp-proxy passthrough-listener)
@@ -31,7 +32,7 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 | `dealer-svc/` | Node/Express mock: `GET /customers`, `GET /vehicles`, `/health`. Logs inbound headers. |
 | `finance-svc/` | Node/Express mock: `GET /invoices`, `GET /floorplans`, `/health`. Logs inbound headers. |
 | `market-mcp/` | Local Cox-themed MCP server (streamable-HTTP) — passthrough target for `/mcp/remote`. |
-| `konnect/mcp-registry/*.json` | Registry create + publish bodies (3 gateway + remote servers). |
+| `konnect/mcp-registry/*.json` | Registry create + 5 publish bodies (dealers, finance, ops, remote, remote-public). |
 | `scripts/konnect-bootstrap.sh` | Create CP + generate/upload DP cert + print endpoints. |
 | `scripts/get-token.sh` | Mint persona token (ROPC via demo-cli), decode + print claims. |
 | `scripts/registry-setup.sh` | Create MCP Registry + publish + discovery GET. |
@@ -57,7 +58,12 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 Tags are Kong **entity** tags on the conversion-only plugin; the listener's `config.server.tag`
 aggregates by them (see NOTES.md).
 
-## Tool ACLs (two-tier, by consumer group)
+## Tool ACLs (by the token's `groups` claim — no Kong consumers)
+
+The `ai-mcp-proxy` listener sets `acl_attribute_type: oauth_access_token` +
+`access_token_claim_field: groups`; per-tool `acl.allow/deny` (bare group names) match values in the
+validated (and, on `/mcp/ops`, post-exchange) token's `groups` claim. Deny wins. Enforced at `tools/call`
+(`tools/list` is not filtered).
 
 | Tool | Allow | Deny |
 |------|-------|------|
@@ -65,6 +71,9 @@ aggregates by them (see NOTES.md).
 | `list_dealer_vehicles` | dealers, ops | finance |
 | `list_invoices` | finance, ops | — |
 | `list_floorplans` | finance | — (ops excluded on purpose) |
+
+Plus, on `/mcp/ops` only, an external **OPA** policy (`opa/policies/mcp.rego`) adds an argument-level rule
+(deny `list_invoices` when `query_status=overdue`) that the tool ACL cannot express.
 
 See `claude/specs/2026-07-22-cai-mcp-demo-design.md` for the full design and `NOTES.md` for
 doc-vs-reality schema notes.

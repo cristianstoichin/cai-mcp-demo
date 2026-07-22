@@ -23,9 +23,15 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   (third-party, protocol 2025-06-18, stateless). ai-mcp-proxy passthrough-listener; ai-mcp-oauth2 gate;
   passthrough_credentials:false. Both 401 unauth; authed tools/list + market-mcp tools/call work.
 
+- **Phase 6 — registry + scripts + README.** MCP Registry live (cai-mcp-registry id
+  e32046ce-ca93-4d02-aa40-eb9aa1eaca7b; 5 servers published/discoverable). Scripts: registry-setup,
+  claude-code-setup, demo (7 steps), preflight (17/17), smoke-test (14/14). README finalized (mermaid,
+  walkthrough, troubleshooting, Known Issues). ARCHITECTURE reconciled.
+
 ## Not yet built
-- Phase 6: registry-setup.sh (klabs host) + konnect/mcp-registry/*.json bodies; claude-code-setup.sh;
-  demo.sh; preflight.sh; smoke-test.sh; README finalize (quickstart + walkthrough + mermaid + Known Issues).
+- **NOTHING — the 6-phase build is COMPLETE and live-verified.** Remaining is polish/handoff to Cox:
+  run against their org (bootstrap → sync → registry-setup on a Labs-enabled US org), optional
+  Dev Portal / analytics, and any demo-day narration tweaks.
 
 ## Key gotchas (see NOTES.md)
 - Token exchange: request SCOPES not audience (Keycloak audience param must name a client); subject token

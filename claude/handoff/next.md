@@ -1,23 +1,17 @@
 # next.md — suggested priorities
 
-**Phase 5 is COMPLETE + LIVE-verified.** Next is **Phase 6** (registry + Claude Code + README + demo):
+**The full 6-phase build is COMPLETE and LIVE-verified against the org.** No build work remains.
 
-1. **Task 6.1 — MCP Registry.** `konnect/mcp-registry/*.json` (create body `cai-mcp-registry` + publish
-   bodies for /mcp/dealers, /mcp/finance, /mcp/ops, /mcp/remote) + `scripts/registry-setup.sh`. Base
-   `https://klabs.${KONNECT_REGION}.api.konghq.com/v0/mcp-registries`; idempotent create → publish 4 →
-   discovery GET `.../v0.1/servers`; helpful 404 message if Labs not enabled. (Registry is US-only tech
-   preview; verify create/publish/discover paths against aegis setup-mcp-registry.sh — see NOTES.md/DECISIONS.)
-2. **Task 6.2 — Claude Code + demo/preflight/smoke.** `scripts/claude-code-setup.sh` emits `claude mcp add
-   --transport http <name> <url> --header "Authorization: Bearer <tok>"` for dealers/finance/ops/remote.
-   `scripts/demo.sh` numbered pause-between-steps (401/200/403 raw curls → tools/list 2/2/2-bundled →
-   registry discovery → audience-mismatch 401 → token-exchange proof via logs → ACL diff + denied call →
-   OPA deny→allow). `scripts/preflight.sh` (tools/ports/health) + `scripts/smoke-test.sh` (docker compose
-   config -q, deck validate, opa check, node /health, JSON validity).
-3. **Task 6.3 — README + finalize.** Quickstart for a fresh 3rd-party Konnect org (Labs toggle; AI Gateway
-   Enterprise licensing note; three-command flow), walkthrough mirroring demo.sh with expected outputs,
-   mermaid architecture diagram, troubleshooting, Known Issues. Reconcile NOTES.md; update handoff + shipped-log.
+Suggested next steps (polish / handoff to Cox):
+1. **Run against Cox's own Konnect org.** Fresh `.env` (their `KONNECT_TOKEN` + region) → `konnect-bootstrap.sh`
+   → `docker compose up -d` → `deck gateway sync` → `registry-setup.sh` (needs their Labs "Catalog - MCP
+   Registry" toggle, US only) → `preflight.sh` + `smoke-test.sh` + `demo.sh`.
+2. **Merge `feat/cai-mcp-demo-build` → `main`** once demoed end-to-end on the target org.
+3. **Optional polish:** Dev Portal publication of the APIs, Konnect analytics/dashboards, a recorded
+   `demo.sh --no-pause` walkthrough, and any Cox-specific tool/data tweaks in dealer-svc/finance-svc/market-mcp.
+4. **Interactive Claude Code OAuth (browser)** — currently curl-with-bearer works; the browser OAuth flow
+   advertises `keycloak:8080` in protected-resource metadata (not host-resolvable). If a browser-based Claude
+   Code hookup is wanted, expose Keycloak on a host-resolvable name and reconcile the issuer pin (NOTES.md Phase 2).
 
-Working method: inline execution; --no-cache rebuilds; deck file validate then gateway sync; verify LIVE
-against the org (PAT already in .env); log every doc-vs-reality finding in NOTES.md; commit per task.
-
-Note: registry-setup.sh must run on the klabs host / with a Labs-enabled org — verify live there.
+Working method unchanged: inline execution; --no-cache rebuilds; deck validate then sync; verify LIVE;
+log doc-vs-reality in NOTES.md; commit per change.

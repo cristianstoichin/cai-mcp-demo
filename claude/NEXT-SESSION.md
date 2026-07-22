@@ -14,19 +14,15 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 
 ## Since last session (2026-07-22)
 
-- **Phases 1–5 COMPLETE + verified LIVE against the org.** Phases 1–4 as before (OIDC matrix, MCP
-  conversion 2/2/2-bundled, aegis-style token-claim ACL, X-User-* forwarded).
-- **Phase 5.1** — /mcp/ops introspection + RFC 8693 token exchange (kong-exchange): an mcp:use-only token
-  reaches dealer+finance tools on /mcp/ops but 403s on /mcp/dealers. Exchange requests SCOPES only (Keycloak
-  audience param = a registered client). ACL still enforces on the exchanged token's groups.
-- **Phase 5.2** — OPA on /mcp/ops: mcp.rego (argument-level deny of list_invoices?query_status=overdue,
-  live 403) + entitlement rule + commented business-hours; opa runs `-w` (hot-reload proven live). Input
-  document doc-verified by observation (caught claim_to_header base64-encoding array claims).
-- **Phase 5.3** — passthrough remotes: /mcp/remote → local market-mcp (Cox tools), /mcp/remote-public →
-  DeepWiki (third-party, protocol 2025-06-18, stateless). ai-mcp-oauth2 gate, passthrough_credentials:false.
-- Stack UP (kong-dp, keycloak, dealer-svc, finance-svc, opa, market-mcp). All Phase-5 findings in NOTES.md.
-- **NEXT: Phase 6** — MCP Registry (registry-setup.sh, klabs host) + claude-code-setup.sh + demo.sh +
-  preflight/smoke + README (quickstart, walkthrough, mermaid, Known Issues). See handoff/next.md.
+- **ALL 6 PHASES COMPLETE + verified LIVE against the org.** The demo is fully built and runnable.
+- **Phase 6** — MCP Registry live (cai-mcp-registry, 5 servers published/discoverable); scripts
+  registry-setup + claude-code-setup + demo (7 steps) + preflight (17/17) + smoke-test (14/14); README
+  finalized (mermaid, walkthrough, troubleshooting, Known Issues). Next: run on Cox's org, then merge to main.
+- **Phases 1–5** — REST OIDC gates, REST→MCP conversion (2/2/2-bundled), token-claim ACL, RFC 8693
+  exchange on /mcp/ops, OPA argument policy, passthrough remotes. Details in `handoff/state.md` + NOTES.md.
+- Stack UP (kong-dp, keycloak, dealer-svc, finance-svc, opa, market-mcp). Registry id in `.env`.
+- **NEXT:** run on Cox's org (bootstrap → sync → registry-setup on a Labs org), then merge to `main`.
+  See `handoff/next.md`.
 
 ## Fragments
 

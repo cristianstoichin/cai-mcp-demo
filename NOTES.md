@@ -137,8 +137,8 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - ✅ **Serviceless listener routes** (top-level `routes:` with no service) sync + function fine.
 
 ## Open doc-verify items (do before wiring the relevant task)
-- [ ] Konnect control-plane create + DP client-cert (PKI/pinned) generate/upload API — for konnect-bootstrap.sh (Task 2.1)
-- [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)
+- [x] Konnect control-plane create + DP client-cert (PKI/pinned) generate/upload API (Task 2.1) — verified (Phase 2)
+- [x] openid-connect bearer-only + scopes_required + audience field names (Task 2.3) — verified (Phase 2)
 - [x] opa plugin: exact `input` document Kong sends (Task 5.2) — doc-verified by observation, see below
 - [x] passthrough-listener config fields + DeepWiki live protocol version ≥ 2025-06-18 (Task 5.3) — verified, see below
 
