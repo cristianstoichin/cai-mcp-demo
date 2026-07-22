@@ -352,6 +352,21 @@ routes:
               header: X-User-Id
             - claim: preferred_username
               header: X-User-Name
+            # Forward the caller's entitlement groups so the external OPA policy can
+            # read them (X-User-Groups) without decoding the JWT itself.
+            - claim: groups
+              header: X-User-Groups
+      # opa — EXTERNAL policy engine as an ADDITIONAL gate on /mcp/ops. Reads the
+      # decoded JSON-RPC body (tool name) + X-User-Groups header and denies
+      # list_invoices for non-finance/ops callers. The policy file (opa/policies/mcp.rego)
+      # hot-reloads with no Kong change — the point of the OPA demo.
+      - name: opa
+        instance_name: opa-ops
+        config:
+          opa_host: opa
+          opa_port: 8181
+          opa_path: /v1/data/mcp/allow
+          include_parsed_json_body_in_opa_input: true
       - name: ai-mcp-proxy
         instance_name: mcp-listener-ops
         config:

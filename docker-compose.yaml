@@ -104,7 +104,12 @@ services:
   # ---------------------------------------------------------------------------
   opa:
     image: openpolicyagent/opa:1.4.2
-    command: ["run", "--server", "--addr", ":8181", "--log-level", "info", "./policies"]
+    # decision_logs.console prints every input document + decision to stdout — this
+    # is how the Phase-5.2 OPA input shape was doc-verified (docker compose logs opa).
+    # -w watches ./policies for changes → hot-reload (edit mcp.rego, no Kong sync).
+    # decision_logs.console prints every input document + decision to stdout — this
+    # is how the Phase-5.2 OPA input shape was doc-verified (docker compose logs opa).
+    command: ["run", "--server", "--addr", ":8181", "-w", "--log-level", "info", "--set=decision_logs.console=true", "./policies"]
     volumes:
       - ./opa/policies:/policies:ro
     ports:

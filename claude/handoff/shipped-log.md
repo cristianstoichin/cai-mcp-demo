@@ -25,3 +25,9 @@
   an mcp:use-only token 403s the inner gate on /mcp/dealers but succeeds on /mcp/ops (exchanged token
   carries dealer-api+finance-api); ACL still enforces on the exchanged token's groups claim
   (frank→dealer DENY, frank→finance OK). Exchange creds injected via compose env (never hardcoded).
+- **2026-07-22** — Phase 5.2: OPA on /mcp/ops. opa/policies/mcp.rego (default allow; entitlement rule +
+  argument-level rule denying list_invoices?query_status=overdue; commented business-hours). opa plugin
+  (include_parsed_json_body_in_opa_input) + claim_to_header groups→X-User-Groups. Input document
+  doc-verified BY OBSERVATION (OPA decision_logs) — caught claim_to_header base64-encoding array claims.
+  OPA runs -w (hot-reload). LIVE-verified: overdue filter → 403 while list_invoices/list_dealer_customers
+  → 200; hot-reload flip took effect with no deck sync. opa check + deck validate pass.

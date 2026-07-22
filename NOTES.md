@@ -125,7 +125,7 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 ## Open doc-verify items (do before wiring the relevant task)
 - [ ] Konnect control-plane create + DP client-cert (PKI/pinned) generate/upload API — for konnect-bootstrap.sh (Task 2.1)
 - [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)
-- [ ] opa plugin: exact `input` document Kong sends (Task 5.2)
+- [x] opa plugin: exact `input` document Kong sends (Task 5.2) — doc-verified by observation, see below
 - [ ] passthrough-listener config fields + DeepWiki live protocol version ≥ 2025-06-18 (Task 5.3)
 
 ## Build findings (Phase 5.1 — introspection + token exchange on /mcp/ops) — verified LIVE
@@ -149,6 +149,40 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   service exports `DECK_KONG_EXCHANGE_CLIENT_ID`(=kong-exchange) + `DECK_KONG_EXCHANGE_SECRET`(from .env);
   `kong/konnect.yaml` reads them with `${{ env "..." }}`. client_id is a fixed realm artifact like the
   `keycloak:8080` issuer; only the secret is sensitive.
+
+## Build findings (Phase 5.2 — OPA on /mcp/ops) — input doc-verified BY OBSERVATION, verified LIVE
+- ✅ **Exact OPA input document Kong 3.14 sends** (captured via OPA `decision_logs.console=true`, not
+  guessed). Query path `POST /v1/data/mcp/allow`, decision reads the boolean at `data.mcp.allow`:
+  ```
+  input.request.http.method            "POST"
+  input.request.http.path              "/mcp/ops"
+  input.request.http.headers           { lower-cased keys: authorization, x-user-id, x-user-name,
+                                         x-user-groups, content-type, ... }
+  input.request.http.parsed_body       { jsonrpc, method:"tools/call", params:{name, arguments} }
+  input.request.http.querystring/scheme/host/port/tls, input.client_ip
+  ```
+  Body is at `input.request.http.parsed_body` (present only with `include_parsed_json_body_in_opa_input:
+  true`) — NOT `input.request.body`. So the rego reads `params.name` (tool) + `params.arguments` there.
+- 🔧 **`claim_to_header` base64-encodes a NON-scalar claim.** `sub`/`preferred_username` (strings) forward
+  as plain `x-user-id`/`x-user-name`; the `groups` ARRAY forwards as **base64-encoded JSON**:
+  `["ops"]` → `x-user-groups: WyJvcHMiXQ==`. The rego must `json.unmarshal(base64.decode(header))` — a
+  comma-split silently mis-parses and denies everyone (observed: OPA returned `result:false` for ops until
+  fixed). This is a genuine trap; verified by the decision log.
+- ✅ **OPA sees the EXCHANGED bearer** in `authorization` (azp=kong-exchange, aud=[dealer-api,finance-api],
+  groups retained) — the opa plugin runs AFTER ai-mcp-oauth2's exchange. So `claim_to_header groups` and
+  the exchanged token agree on the caller's groups.
+- ✅ **OPA-decides case that the tool ACL cannot express:** Rule 2 denies `list_invoices` when arg
+  `query_status=overdue` — the ACL is tool-grained, only OPA sees call arguments. Live: olivia
+  list_invoices → 200, `+query_status=overdue` → **403 `{"message":"unauthorized"}`**, list_dealer_customers
+  → 200. (Query args are namespaced `query_<name>` — Phase-3 finding — so the rego checks `query_status`.)
+- ✅ **Hot-reload proven:** OPA runs `run --server -w ./policies`; editing `mcp.rego` (appending a deny for
+  list_dealer_customers) flipped the live result to 403 with NO deck sync ("Processed file watch event" in
+  the OPA log), reverted back to 200 on undo. This is the OPA value prop — policy iterates without touching
+  Kong.
+- ⚠️ **Rule 1 (finance/ops-only for list_invoices) is shadowed by the tool ACL on /mcp/ops** (ACL
+  `allow:[finance,ops]` denies a dealers-only caller before OPA runs), so it's verified OFFLINE via
+  `opa eval` against the observed input, not live. It stays as the "same entitlement, externalized" teaching
+  point; Rule 2 is the live OPA-is-the-decider proof.
 
 ## Build findings (Phase 4) — aegis-style ACL, verified LIVE
 - ✅ **Switched to aegis scope/claim ACL** (reverses D4, at Paul's request). `ai-mcp-proxy` **listener**
