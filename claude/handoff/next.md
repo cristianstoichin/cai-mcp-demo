@@ -1,17 +1,23 @@
 # next.md — suggested priorities
 
-**Phase 5** (per plan) — build + LIVE-verify each against the org:
-1. `/mcp/ops` ai-mcp-oauth2: switch to introspection (kong-exchange creds) + `token_exchange.enabled`
-   (aegis style: request.audience [dealer-api, finance-api], request.scopes). Prove exchange with an
-   `mcp:use`-ONLY token (no API audiences) — that's the case direct-forwarding can't satisfy.
-2. `opa` plugin on `/mcp/ops` → `http://opa:8181/v1/data/mcp/allow`; write `opa/policies/mcp.rego`
-   (default allow; deny tools/call for list_invoices unless token groups include finance|ops; commented
-   business-hours rule). Doc-verify the exact OPA input document Kong sends first.
-3. `market-mcp` (local Node streamable-HTTP MCP, Cox tools) + `/mcp/remote` (passthrough → market-mcp)
-   and `/mcp/remote-public` (passthrough → DeepWiki), both fronted by ai-mcp-oauth2. Verify DeepWiki
-   protocol >= 2025-06-18 live.
+**Phase 5 is COMPLETE + LIVE-verified.** Next is **Phase 6** (registry + Claude Code + README + demo):
 
-**Phase 6** — registry-setup.sh (klabs host), claude-code-setup.sh, demo.sh, README finalize + mermaid.
+1. **Task 6.1 — MCP Registry.** `konnect/mcp-registry/*.json` (create body `cai-mcp-registry` + publish
+   bodies for /mcp/dealers, /mcp/finance, /mcp/ops, /mcp/remote) + `scripts/registry-setup.sh`. Base
+   `https://klabs.${KONNECT_REGION}.api.konghq.com/v0/mcp-registries`; idempotent create → publish 4 →
+   discovery GET `.../v0.1/servers`; helpful 404 message if Labs not enabled. (Registry is US-only tech
+   preview; verify create/publish/discover paths against aegis setup-mcp-registry.sh — see NOTES.md/DECISIONS.)
+2. **Task 6.2 — Claude Code + demo/preflight/smoke.** `scripts/claude-code-setup.sh` emits `claude mcp add
+   --transport http <name> <url> --header "Authorization: Bearer <tok>"` for dealers/finance/ops/remote.
+   `scripts/demo.sh` numbered pause-between-steps (401/200/403 raw curls → tools/list 2/2/2-bundled →
+   registry discovery → audience-mismatch 401 → token-exchange proof via logs → ACL diff + denied call →
+   OPA deny→allow). `scripts/preflight.sh` (tools/ports/health) + `scripts/smoke-test.sh` (docker compose
+   config -q, deck validate, opa check, node /health, JSON validity).
+3. **Task 6.3 — README + finalize.** Quickstart for a fresh 3rd-party Konnect org (Labs toggle; AI Gateway
+   Enterprise licensing note; three-command flow), walkthrough mirroring demo.sh with expected outputs,
+   mermaid architecture diagram, troubleshooting, Known Issues. Reconcile NOTES.md; update handoff + shipped-log.
 
 Working method: inline execution; --no-cache rebuilds; deck file validate then gateway sync; verify LIVE
-against the org (PAT already in .env); log every doc-vs-reality finding in NOTES.md.
+against the org (PAT already in .env); log every doc-vs-reality finding in NOTES.md; commit per task.
+
+Note: registry-setup.sh must run on the klabs host / with a Labs-enabled org — verify live there.

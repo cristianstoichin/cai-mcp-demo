@@ -14,13 +14,19 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 
 ## Since last session (2026-07-22)
 
-- **Phases 1–4 COMPLETE + verified LIVE against the org.** DP connected; deck sync clean; OIDC matrix
-  401/200/403; MCP tools/list = 2/2/2-bundled; tools/call round-trips; **aegis-style token-claim tool
-  ACL** (allow/deny matrix correct); X-User-* forwarded.
-- **ACL approach changed at Paul's request:** reverted D4 → aegis scope/claim ACL (`acl_attribute_type:
-  oauth_access_token` + `access_token_claim_field: groups`); no Kong consumers. See DECISIONS.md.
-- Stack is currently UP (kong-dp, keycloak, dealer-svc, finance-svc). market-mcp/opa not built yet.
-- **NEXT: Phase 5** — token_exchange + OPA on /mcp/ops, local market-mcp, two passthrough remote routes.
+- **Phases 1–5 COMPLETE + verified LIVE against the org.** Phases 1–4 as before (OIDC matrix, MCP
+  conversion 2/2/2-bundled, aegis-style token-claim ACL, X-User-* forwarded).
+- **Phase 5.1** — /mcp/ops introspection + RFC 8693 token exchange (kong-exchange): an mcp:use-only token
+  reaches dealer+finance tools on /mcp/ops but 403s on /mcp/dealers. Exchange requests SCOPES only (Keycloak
+  audience param = a registered client). ACL still enforces on the exchanged token's groups.
+- **Phase 5.2** — OPA on /mcp/ops: mcp.rego (argument-level deny of list_invoices?query_status=overdue,
+  live 403) + entitlement rule + commented business-hours; opa runs `-w` (hot-reload proven live). Input
+  document doc-verified by observation (caught claim_to_header base64-encoding array claims).
+- **Phase 5.3** — passthrough remotes: /mcp/remote → local market-mcp (Cox tools), /mcp/remote-public →
+  DeepWiki (third-party, protocol 2025-06-18, stateless). ai-mcp-oauth2 gate, passthrough_credentials:false.
+- Stack UP (kong-dp, keycloak, dealer-svc, finance-svc, opa, market-mcp). All Phase-5 findings in NOTES.md.
+- **NEXT: Phase 6** — MCP Registry (registry-setup.sh, klabs host) + claude-code-setup.sh + demo.sh +
+  preflight/smoke + README (quickstart, walkthrough, mermaid, Known Issues). See handoff/next.md.
 
 ## Fragments
 
