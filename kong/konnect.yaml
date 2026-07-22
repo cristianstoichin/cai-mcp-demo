@@ -1,15 +1,17 @@
 # =============================================================================
 # cai-mcp-demo — Kong declarative config (decK), synced to a DEDICATED Konnect
-# control plane. No select_tags: the demo owns its control plane, so `deck gateway
-# sync` reconciles the whole CP to this file. Functional entity `tags` on the
-# ai-mcp-proxy plugins (added in Phase 3) drive listener aggregation by server.tag.
+# control plane. No select_tags: the demo owns its control plane. Functional
+# entity `tags` on the ai-mcp-proxy conversion plugins drive listener aggregation
+# by config.server.tag.
 #
-# Phase 2 scope: two REST services, four routes, openid-connect bearer-only gates.
-# ai-mcp-proxy / ai-mcp-oauth2 / consumers / ACLs / OPA arrive in later phases.
+# Phases:
+#   2  two REST services, four routes, openid-connect bearer-only gates.
+#   3  ai-mcp-proxy conversion-only on the REST routes + listener routes /mcp/*.
+#   4+ ai-mcp-oauth2, consumers/groups, tool ACLs, token exchange, OPA (later).
 #
-# Issuer note: openid-connect.issuer is the INTERNAL Keycloak URL (reachable from
-# the DP) and Keycloak is pinned to that same hostname so token `iss` matches
-# whether minted from the host or validated by the DP. See NOTES.md (Phase 2).
+# Issuer: openid-connect.issuer is the INTERNAL Keycloak URL and Keycloak is
+# pinned to that hostname so token `iss` matches host-minted and DP-validated
+# tokens alike. See NOTES.md (Phase 2).
 # =============================================================================
 _format_version: "3.0"
 
@@ -18,7 +20,7 @@ _konnect:
 
 services:
   # ---------------------------------------------------------------------------
-  # Dealer REST API -> converted to MCP tools (Phase 3).
+  # Dealer REST API. Each route: openid-connect gate + ai-mcp-proxy conversion-only.
   # ---------------------------------------------------------------------------
   - name: dealer-svc
     host: dealer-svc
@@ -29,8 +31,7 @@ services:
     write_timeout: 30000
     routes:
       - name: dealer-customers
-        paths:
-          - /api/dealers/customers
+        paths: [/api/dealers/customers]
         methods: [GET]
         strip_path: false
         plugins:
@@ -42,10 +43,30 @@ services:
               scopes_required: [dealers:read]
               audience_required: [dealer-api]
               disable_session: [bearer]
+          - name: ai-mcp-proxy
+            instance_name: mcp-conv-dealer-customers
+            tags: [dealer-tools, bundle-tools]
+            config:
+              mode: conversion-only
+              logging:
+                log_audits: true
+              tools:
+                - name: list_dealer_customers
+                  description: >-
+                    List Cox Automotive dealership customers. Returns each customer's name,
+                    dealership, sales region, and KBB trade-in interest. Optionally filter by region.
+                  method: GET
+                  path: /api/dealers/customers
+                  parameters:
+                    - name: region
+                      in: query
+                      description: "Filter by sales region: southeast, midwest, west, or northeast."
+                      required: false
+                      schema:
+                        type: string
 
       - name: dealer-vehicles
-        paths:
-          - /api/dealers/vehicles
+        paths: [/api/dealers/vehicles]
         methods: [GET]
         strip_path: false
         plugins:
@@ -57,9 +78,30 @@ services:
               scopes_required: [dealers:read]
               audience_required: [dealer-api]
               disable_session: [bearer]
+          - name: ai-mcp-proxy
+            instance_name: mcp-conv-dealer-vehicles
+            tags: [dealer-tools]
+            config:
+              mode: conversion-only
+              logging:
+                log_audits: true
+              tools:
+                - name: list_dealer_vehicles
+                  description: >-
+                    List Cox Automotive dealer inventory vehicles. Returns VIN, make, model,
+                    days on lot, and vAuto-style price rank. Optionally filter by price rank.
+                  method: GET
+                  path: /api/dealers/vehicles
+                  parameters:
+                    - name: price_rank
+                      in: query
+                      description: "Filter by vAuto price rank: great, good, fair, or high."
+                      required: false
+                      schema:
+                        type: string
 
   # ---------------------------------------------------------------------------
-  # Finance REST API -> converted to MCP tools (Phase 3).
+  # Finance REST API.
   # ---------------------------------------------------------------------------
   - name: finance-svc
     host: finance-svc
@@ -70,8 +112,7 @@ services:
     write_timeout: 30000
     routes:
       - name: finance-invoices
-        paths:
-          - /api/finance/invoices
+        paths: [/api/finance/invoices]
         methods: [GET]
         strip_path: false
         plugins:
@@ -83,10 +124,30 @@ services:
               scopes_required: [finance:read]
               audience_required: [finance-api]
               disable_session: [bearer]
+          - name: ai-mcp-proxy
+            instance_name: mcp-conv-finance-invoices
+            tags: [finance-tools, bundle-tools]
+            config:
+              mode: conversion-only
+              logging:
+                log_audits: true
+              tools:
+                - name: list_invoices
+                  description: >-
+                    List Cox Automotive dealer floor-plan invoices. Returns invoice id, dealer,
+                    amount, and status. Optionally filter by status.
+                  method: GET
+                  path: /api/finance/invoices
+                  parameters:
+                    - name: status
+                      in: query
+                      description: "Filter by invoice status: paid, overdue, or pending."
+                      required: false
+                      schema:
+                        type: string
 
       - name: finance-floorplans
-        paths:
-          - /api/finance/floorplans
+        paths: [/api/finance/floorplans]
         methods: [GET]
         strip_path: false
         plugins:
@@ -98,3 +159,81 @@ services:
               scopes_required: [finance:read]
               audience_required: [finance-api]
               disable_session: [bearer]
+          - name: ai-mcp-proxy
+            instance_name: mcp-conv-finance-floorplans
+            tags: [finance-tools]
+            config:
+              mode: conversion-only
+              logging:
+                log_audits: true
+              tools:
+                - name: list_floorplans
+                  description: >-
+                    List Cox Automotive floor-plan lines. Returns floor-plan line, utilization,
+                    and next audit date. Optionally filter by audit urgency.
+                  method: GET
+                  path: /api/finance/floorplans
+                  parameters:
+                    - name: status
+                      in: query
+                      description: "Filter by audit urgency: due-soon or ok."
+                      required: false
+                      schema:
+                        type: string
+
+# =============================================================================
+# MCP listener routes (serviceless). Each aggregates the conversion-only tools
+# whose plugin carries the matching entity tag (config.server.tag). Phase 4 adds
+# ai-mcp-oauth2 in front of these; consumer-group ACLs live on the conversion tools.
+# =============================================================================
+routes:
+  - name: mcp-dealers
+    paths: [/mcp/dealers]
+    methods: [GET, POST, DELETE]
+    strip_path: false
+    request_buffering: false
+    response_buffering: false
+    plugins:
+      - name: ai-mcp-proxy
+        instance_name: mcp-listener-dealers
+        config:
+          mode: listener
+          include_consumer_groups: true
+          server:
+            tag: dealer-tools
+          logging:
+            log_audits: true
+
+  - name: mcp-finance
+    paths: [/mcp/finance]
+    methods: [GET, POST, DELETE]
+    strip_path: false
+    request_buffering: false
+    response_buffering: false
+    plugins:
+      - name: ai-mcp-proxy
+        instance_name: mcp-listener-finance
+        config:
+          mode: listener
+          include_consumer_groups: true
+          server:
+            tag: finance-tools
+          logging:
+            log_audits: true
+
+  - name: mcp-ops
+    paths: [/mcp/ops]
+    methods: [GET, POST, DELETE]
+    strip_path: false
+    request_buffering: false
+    response_buffering: false
+    plugins:
+      - name: ai-mcp-proxy
+        instance_name: mcp-listener-ops
+        config:
+          mode: listener
+          include_consumer_groups: true
+          server:
+            tag: bundle-tools
+          logging:
+            log_audits: true

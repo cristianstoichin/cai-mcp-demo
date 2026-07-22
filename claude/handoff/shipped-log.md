@@ -9,3 +9,9 @@
   4 routes, openid-connect bearer-only gates). Pinned Keycloak issuer to keycloak:8080 so host+DP
   agree (verified). Mocks now own /api/dealers/* + /api/finance/* (strip_path:false). deck file
   validate passes offline.
+- **2026-07-22** — Phases 1+2 VERIFIED LIVE against org (CP 007f4c01…): bootstrap created CP + pinned
+  cert, DP connected, deck sync clean, auth matrix 401/200/403/200 all correct.
+- **2026-07-22** — Phase 3: ai-mcp-proxy conversion-only on 4 REST routes (entity tags + OpenAPI
+  params + log_audits) + 3 serviceless listener routes (server.tag aggregation, include_consumer_groups).
+  LIVE-verified: tools/list = 2/2/2-bundled; tools/call round-trips to upstream with a forwarded bearer
+  (query_<name> arg namespacing). deck file validate + gateway sync pass.

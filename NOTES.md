@@ -100,6 +100,22 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   `cai-mcp-demo`), so `deck gateway sync` manages the whole CP. Functional entity `tags` on ai-mcp-proxy
   plugins (dealer-tools/finance-tools/bundle-tools) remain, for `server.tag` aggregation.
 
+## Build findings (Phase 3) — all verified LIVE against the org
+- ✅ **Tag aggregation works**: `config.server.tag` on a `listener` aggregates conversion-only tools by
+  the plugin's **entity** `tags`. `/mcp/dealers`→2 (dealer-tools), `/mcp/finance`→2 (finance-tools),
+  `/mcp/ops`→2 (bundle-tools = list_dealer_customers + list_invoices). Exactly as designed.
+- 🔧 **Query params are namespaced `query_<name>`** in the generated MCP `inputSchema` (path→`path_`,
+  etc.), and the schema is `additionalProperties:false`. So a `tools/call` argument is `query_region`,
+  NOT `region`. demo.sh + docs must use the prefixed names. Verified via tools/list inputSchema.
+- ✅ **Listener forwards the client bearer** (`forward_client_headers` default true) to the inner
+  conversion route. So `tools/call` with a token whose audience+scope satisfy the inner OIDC gate
+  returns upstream data directly; without a token the inner gate returns 401 (surfaced as MCP
+  `HTTP call failed with status 401`). Implication: **token exchange is only required when the MCP
+  token lacks the API audiences** (e.g. an mcp-ops-only token). dana/olivia tokens (which carry
+  dealer-api/finance-api via the requested scopes) work by direct forwarding. Confirm the exchange
+  path in Phase 5 with an mcp:use-only token.
+- ✅ **Serviceless listener routes** (top-level `routes:` with no service) sync + function fine.
+
 ## Open doc-verify items (do before wiring the relevant task)
 - [ ] Konnect control-plane create + DP client-cert (PKI/pinned) generate/upload API — for konnect-bootstrap.sh (Task 2.1)
 - [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)
