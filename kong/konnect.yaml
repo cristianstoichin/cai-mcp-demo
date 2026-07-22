@@ -297,23 +297,51 @@ routes:
     request_buffering: false
     response_buffering: false
     plugins:
-      # Phase 4: JWKS validation (like dealers/finance). Phase 5 upgrades THIS instance
-      # to introspection + token_exchange + passthrough_credentials, and adds the opa plugin.
+      # Phase 5: /mcp/ops is the "operations" endpoint. Unlike dealers/finance (JWKS),
+      # it validates via INTROSPECTION (kong-exchange confidential client) AND performs
+      # an RFC 8693 standard token exchange. This lets an mcp:use-ONLY token (which lacks
+      # the dealer-api/finance-api audiences the inner OIDC gates require) still call the
+      # bundled dealer+finance tools: Kong exchanges it for a token carrying both API
+      # audiences+scopes, then forwards THAT to the inner conversion route. dana/olivia
+      # tokens that already carry the API audiences work by direct forwarding; the exchange
+      # is what makes the mcp:use-only case succeed — the story direct-forwarding can't tell.
       - name: ai-mcp-oauth2
         instance_name: mcp-oauth2-ops
         config:
           authorization_servers: [http://keycloak:8080/realms/cox-auto]
           resource: http://localhost:8000/mcp/ops
           metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+          # Force introspection-based validation (contrast with dealers/finance JWKS). Requires
+          # a confidential client; kong-exchange authenticates the introspection call. Keycloak's
+          # introspection response carries the full claim set (sub/preferred_username/groups),
+          # so claim_to_header + the listener's groups-claim ACL still work.
+          introspection_endpoint: http://keycloak:8080/realms/cox-auto/protocol/openid-connect/token/introspect
+          client_id: ${{ env "DECK_KONG_EXCHANGE_CLIENT_ID" }}
+          client_secret: ${{ env "DECK_KONG_EXCHANGE_SECRET" }}
+          client_auth: client_secret_post
           # ai-mcp-oauth2 otherwise enforces RFC 8707 resource-indicator binding (token aud must
           # equal the resource URL). Our Keycloak audiences are mcp-*/dealer-api/finance-api, so we
-          # relax that check at the listener and let authorization be enforced by (a) the consumer-group
-          # tool ACL here and (b) the inner openid-connect gate's scope+audience on the forwarded token.
+          # relax that check at the listener and let authorization be enforced by (a) the token-claim
+          # tool ACL here and (b) the inner openid-connect gate's scope+audience on the EXCHANGED token.
           insecure_relaxed_audience_validation: true
-          # Forward the client bearer to the inner conversion route so its openid-connect gate can
-          # validate scope+audience. Without this the inner gate gets no token and every tool call 401s.
+          # Forward the (exchanged) bearer to the inner conversion route so its openid-connect gate
+          # can validate scope+audience. With token_exchange below, the forwarded token is the
+          # exchanged one carrying dealer-api/finance-api — so the inner gate passes for mcp:use tokens.
           passthrough_credentials: true
-          # ACL is now token-claim based (see the listener's acl_attribute_type), so consumer
+          # RFC 8693 standard token exchange (Keycloak V2). client_auth: inherit reuses the
+          # introspection client (kong-exchange) creds above. We request the API SCOPES only —
+          # NOT an audience. In Keycloak the token-exchange `audience` param must name a registered
+          # CLIENT (dealer-api/finance-api are audience strings, not clients → "Audience not found").
+          # Instead, requesting scopes dealers:read+finance:read fires those scopes' audience mappers,
+          # so the exchanged token carries aud=[dealer-api,finance-api] AND retains groups=[...] for
+          # the listener ACL. Verified live against Keycloak 26. See NOTES.md Phase-5.
+          token_exchange:
+            enabled: true
+            token_endpoint: http://keycloak:8080/realms/cox-auto/protocol/openid-connect/token
+            client_auth: inherit
+            request:
+              scopes: [dealers:read, finance:read]
+          # ACL is token-claim based (see the listener's acl_attribute_type), so consumer
           # groups are no longer mapped. consumer_claim stays optional purely for analytics
           # attribution if consumers are added later; identity is forwarded via claim_to_header.
           consumer_claim: [preferred_username]

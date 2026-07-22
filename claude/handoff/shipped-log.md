@@ -19,3 +19,9 @@
   passthrough, claim_to_header X-User-*) + token-claim tool ACL (acl_attribute_type: oauth_access_token,
   access_token_claim_field: groups). Reverses D4 per request; no Kong consumers. LIVE-verified allow+deny
   matrix; X-User-* forwarded. deck sync clean.
+- **2026-07-22** — Phase 5.1: /mcp/ops upgraded to introspection (kong-exchange confidential client) +
+  RFC 8693 standard token exchange (client_auth: inherit). Exchange requests scopes only (Keycloak's
+  `audience` param wants a registered client, not an audience string — logged in NOTES.md). LIVE-verified:
+  an mcp:use-only token 403s the inner gate on /mcp/dealers but succeeds on /mcp/ops (exchanged token
+  carries dealer-api+finance-api); ACL still enforces on the exchanged token's groups claim
+  (frank→dealer DENY, frank→finance OK). Exchange creds injected via compose env (never hardcoded).

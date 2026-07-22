@@ -163,6 +163,13 @@ services:
       DECK_KONNECT_TOKEN: ${KONNECT_TOKEN}
       DECK_KONNECT_CONTROL_PLANE_NAME: ${KONNECT_CONTROL_PLANE_NAME}
       DECK_KONNECT_ADDR: https://${KONNECT_REGION:-us}.api.konghq.com
+      # kong-exchange confidential client creds — used by the /mcp/ops ai-mcp-oauth2
+      # instance for token introspection AND the RFC 8693 token exchange (client_auth:
+      # inherit reuses these). Injected via ${{ env }} in kong/konnect.yaml so the
+      # secret never lands in the declarative config. client_id is a fixed realm
+      # artifact (like the keycloak: issuer), the secret comes from .env.
+      DECK_KONG_EXCHANGE_CLIENT_ID: ${KONG_EXCHANGE_CLIENT_ID:-kong-exchange}
+      DECK_KONG_EXCHANGE_SECRET: ${KONG_EXCHANGE_SECRET}
     volumes:
       - ./kong:/config:ro
     profiles: ["tools"]

@@ -49,8 +49,14 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   carry the requesting client (`kong-exchange`) in its `aud`. Therefore the `mcp:use` audience mapper
   must include `kong-exchange` alongside `mcp-ops` — otherwise the `/mcp/ops` exchange fails. Encoded a
   dedicated audience mapper for `kong-exchange` on the `mcp:use` scope.
-- ⚠️ Cross-audience (`audience=dealer-api|finance-api`) issuance via standard exchange to be confirmed
-  live in Phase 5; fallback documented in design §4.2 (enable token_exchange on all three listeners).
+- ✅ **RESOLVED (Phase 5, live):** Cross-audience issuance via standard exchange works — but NOT via the
+  RFC 8693 `audience` request param. In Keycloak, the exchange `audience` param must name a **registered
+  client** by clientId; `dealer-api`/`finance-api` are audience *strings* (from scope mappers), not
+  clients, so passing `audience=dealer-api` returns `invalid_client / "Audience not found"`. Instead,
+  request the **scopes** (`scope=dealers:read finance:read`): their `oidc-audience-mapper`s add
+  `aud:[dealer-api,finance-api]` to the exchanged token, and `groups` is retained (default scope) for the
+  listener ACL. So `ai-mcp-oauth2.token_exchange.request` sets `scopes` only, NO `audience`. The design
+  §4.2 fallback (exchange on all three listeners) was NOT needed — exchange stays on `/mcp/ops` alone.
 
 ## Discrepancies from the aegis reference
 - 🔧 **MCP Registry host**: aegis `setup-mcp-registry.sh` uses `https://klabs.us.api.konghq.com/v0/mcp-registries`
@@ -121,6 +127,28 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - [ ] openid-connect bearer-only + scopes_required + audience field names (Task 2.3)
 - [ ] opa plugin: exact `input` document Kong sends (Task 5.2)
 - [ ] passthrough-listener config fields + DeepWiki live protocol version ≥ 2025-06-18 (Task 5.3)
+
+## Build findings (Phase 5.1 — introspection + token exchange on /mcp/ops) — verified LIVE
+- ✅ **Introspection + token_exchange on one `ai-mcp-oauth2` instance works.** `/mcp/ops` sets
+  `introspection_endpoint` (Keycloak `/protocol/openid-connect/token/introspect`) + `client_id`/
+  `client_secret` (kong-exchange, `client_auth: client_secret_post`); `token_exchange.client_auth:
+  inherit` reuses those creds. Introspection validation still surfaces `sub`/`preferred_username`/`groups`
+  for `claim_to_header` and the listener's `access_token_claim_field: groups` ACL.
+- 🔧 **Keycloak token-exchange `audience` param = a registered CLIENT, not an audience string** — see the
+  RESOLVED note above. `token_exchange.request` carries `scopes: [dealers:read, finance:read]` only.
+- ✅ **The exchange is the story direct-forwarding can't tell.** An `mcp:use`-only token (aud=[mcp-*,
+  kong-exchange], NO dealer-api/finance-api) 403s the inner OIDC gate on `/mcp/dealers` (no exchange) but
+  SUCCEEDS on `/mcp/ops`: Kong exchanges it → aud=[dealer-api,finance-api] + dealers:read/finance:read,
+  forwarded via `passthrough_credentials`. Live matrix: olivia mcp:use-only → dealer+finance tools OK on
+  /mcp/ops, 403 on /mcp/dealers; frank mcp:use-only → dealer tool ACL-DENY (exchanged token keeps
+  groups=[finance]), finance tool OK. Kong log `[ai-mcp-oauth2] exchanging access token` on each ops call.
+- ⚠️ **Subject token MUST carry `kong-exchange` in `aud`** or the exchange fails `invalid_client`. The
+  `mcp:use` scope's `aud-kong-exchange` mapper (`included.client.audience: kong-exchange`) provides it, so
+  every persona token that requested `mcp:use` is exchangeable. (client-audience mapper, not custom-audience.)
+- 🔧 **Exchange client creds reach decK via compose env**, never hardcoded: `docker-compose.yaml` deck
+  service exports `DECK_KONG_EXCHANGE_CLIENT_ID`(=kong-exchange) + `DECK_KONG_EXCHANGE_SECRET`(from .env);
+  `kong/konnect.yaml` reads them with `${{ env "..." }}`. client_id is a fixed realm artifact like the
+  `keycloak:8080` issuer; only the secret is sensitive.
 
 ## Build findings (Phase 4) — aegis-style ACL, verified LIVE
 - ✅ **Switched to aegis scope/claim ACL** (reverses D4, at Paul's request). `ai-mcp-proxy` **listener**
