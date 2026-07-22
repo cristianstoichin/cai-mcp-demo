@@ -1,0 +1,12 @@
+{
+  "name": "com.cox-automotive/finance-mcp",
+  "title": "Cox Finance MCP",
+  "description": "Cox floor-plan finance: list invoices and floor-plan lines as governed MCP tools.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp/finance"
+    }
+  ]
+}

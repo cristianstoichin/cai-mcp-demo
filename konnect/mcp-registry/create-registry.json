@@ -1,0 +1,5 @@
+{
+  "name": "cai-mcp-registry",
+  "display_name": "Cox Automotive MCP Registry",
+  "description": "Governed MCP servers for Cox Automotive — dealer, finance, ops (bundled), and remote MCP servers fronted by Kong AI Gateway."
+}

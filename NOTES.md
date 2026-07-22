@@ -63,6 +63,20 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   (NOT the aegis README's stale `us.api.konghq.com/v2`). Paths: create `POST /v0/mcp-registries`,
   publish `POST /{id}/v0.1/publish`, discover `GET /{id}/v0.1/servers`. US region only; Labs tech preview.
 
+## Build findings (Phase 6.1 — MCP Registry) — verified LIVE against org
+- ✅ Registry create/publish/discover paths confirmed live: `POST /v0/mcp-registries` (create body
+  `{name, display_name, description}`), `POST /{id}/v0.1/publish` (server manifest), `GET /{id}/v0.1/servers`
+  (discovery). Created `cai-mcp-registry` and published+discovered all 5 servers.
+- 🔧 **Publish `description` is capped at 100 chars** — a longer one 400s with
+  `{field:description, rule:max_length, maximum:100}`. All 5 publish bodies trimmed to ≤100. (Title/name
+  had no issue at our lengths.) Server manifest shape that works: `{name (reverse-DNS, e.g.
+  com.cox-automotive/dealer-mcp), title, description(≤100), version, remotes:[{type:"streamable-http", url}]}`.
+- ✅ Registry entries advertise the canonical `http://localhost:8000/mcp/*` (per the hard rule) — the URL a
+  host-side client (Claude Code) connects to. Registry id is written to `.env` as `KONNECT_MCP_REGISTRY_ID`.
+- 🔧 **5 servers, not 4** — published dealers/finance/ops/remote AND remote-public (the plan's Task 6.1 text
+  said 4 but the File-Structure note said "3 gateway + 2 remote" = 5; the complete set is more faithful and
+  the third-party DeepWiki entry is a good "governed remote" story). registry-setup.sh publishes all 5.
+
 ## Build findings (Phase 1)
 - 🔧 **Keycloak built-in scopes not reliably linked on realm import.** Setting an explicit
   `defaultClientScopes` list on a client detaches the built-in `basic`/`profile` scopes, so

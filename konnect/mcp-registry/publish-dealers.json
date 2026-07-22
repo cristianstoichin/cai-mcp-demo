@@ -1,0 +1,12 @@
+{
+  "name": "com.cox-automotive/dealer-mcp",
+  "title": "Cox Dealer MCP",
+  "description": "Cox dealer ops: list dealership customers and inventory vehicles as governed MCP tools.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp/dealers"
+    }
+  ]
+}

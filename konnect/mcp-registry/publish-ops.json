@@ -1,0 +1,12 @@
+{
+  "name": "com.cox-automotive/ops-mcp",
+  "title": "Cox Ops MCP (bundled)",
+  "description": "Bundled dealer+finance tools with RFC 8693 token exchange and external OPA policy.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp/ops"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "com.cox-automotive/deepwiki-mcp",
+  "title": "DeepWiki MCP (third-party, governed)",
+  "description": "DeepWiki third-party MCP governed behind Kong; a valid cox-auto token is required.",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp/remote-public"
+    }
+  ]
+}

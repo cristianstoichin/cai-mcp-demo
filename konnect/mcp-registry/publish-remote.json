@@ -1,0 +1,12 @@
+{
+  "name": "com.cox-automotive/market-mcp",
+  "title": "Cox Market MCP (remote)",
+  "description": "Cox market intel: price bands and inventory days-supply (governed passthrough).",
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp/remote"
+    }
+  ]
+}
