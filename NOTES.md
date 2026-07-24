@@ -349,3 +349,4 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
 - **Authz unaffected** by adding consumers: the ai-mcp-proxy ACL is `acl_attribute_type: oauth_access_token`
   (groups claim); a resolved consumer is used only for analytics/identity. Verified 24/24 `allow` after each
   change. No standalone `acl` plugin exists to trip on consumer membership.
+- ✅ **VERIFIED LIVE (2026-07-24):** the 'Tool calls by consumer' tile shows all three (dana.dealer / frank.finance / olivia.ops). Real-consumer attribution confirmed end-to-end.

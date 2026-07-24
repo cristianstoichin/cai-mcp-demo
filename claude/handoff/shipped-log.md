@@ -69,3 +69,8 @@
   **status** works in-container via read-only /var/run/docker.sock + `docker ps` (label-filtered).
   LIVE-verified: built --no-cache, up healthy, all 5 verdict signatures + exchange + registry(5) +
   status(6) correct through the container; Playwright confirmed the in-container Stack note renders.
+
+## 2026-07-24 — Konnect Observability fixed + per-identity attribution
+- Empty dashboards → `log_statistics: true` on ai-mcp-proxy (agentic_usage was never emitted).
+- Serviceless-listener tiles re-keyed to `route` + `response_latency_average`.
+- Per-identity attribution: proved dashboard `consumer` dim needs REAL consumers (credential_claim + consumer_groups_claim both empty; aegis confirms). Added 3 consumers (analytics-only; authz still the groups claim). **Verified live — consumer tile shows all three.** DECISIONS U12.
