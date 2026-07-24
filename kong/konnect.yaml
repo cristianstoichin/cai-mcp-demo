@@ -472,3 +472,13 @@ routes:
 # oauth_access_token + access_token_claim_field: groups), so there are no Kong
 # consumers or consumer_groups — the `groups` claim in the validated access token
 # is the ACL subject. See claude/DECISIONS.md (reverses D4).
+
+# Consumer entities — identity records ONLY (no credentials; auth is the OIDC token).
+# The listeners' ai-mcp-oauth2 consumer_claim:[preferred_username] + consumer_by:[username]
+# resolve each token to one of these, so Konnect analytics attributes every tool call to a
+# person. Authorization is UNCHANGED — still the token's `groups` claim on the ai-mcp-proxy ACL.
+consumers:
+  - username: dana.dealer
+  - username: frank.finance
+  - username: olivia.ops
+

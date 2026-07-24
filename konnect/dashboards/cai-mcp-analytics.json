@@ -199,6 +199,41 @@
           ]
         }
       }
+    },
+    {
+      "id": "cai-mcp-by-consumer",
+      "type": "chart",
+      "layout": {
+        "size": {
+          "cols": 6,
+          "rows": 2
+        },
+        "position": {
+          "col": 0,
+          "row": 4
+        }
+      },
+      "definition": {
+        "chart": {
+          "type": "horizontal_bar",
+          "chart_title": "Tool calls by consumer (dana.dealer / frank.finance / olivia.ops)"
+        },
+        "query": {
+          "filters": [
+            {
+              "field": "consumer",
+              "operator": "not_empty"
+            }
+          ],
+          "metrics": [
+            "request_count"
+          ],
+          "datasource": "agentic_usage",
+          "dimensions": [
+            "consumer"
+          ]
+        }
+      }
     }
   ]
 }

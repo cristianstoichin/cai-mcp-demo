@@ -331,3 +331,21 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   consumer entity**. Reverted credential_claim (never committed). Per-identity analytics ⇒ real consumers
   (mapped via `consumer_claim: [preferred_username]`) or stay consumer-less (identity lives in the cockpit
   badges). Authz is unaffected either way (token `groups` claim). See [[agentic-usage-needs-log-statistics]].
+
+## Doc-vs-reality (2026-07-24) — agentic dashboard consumer dim needs REAL consumers
+- **Settled by 3 live tests + aegis.** The `agentic_usage` DASHBOARD `consumer`/`consumer_group`
+  dimensions populate ONLY from real Kong consumer entities:
+  - `credential_claim: [preferred_username]` (virtual/pseudo-consumer, no entity) → consumer tile EMPTY.
+  - `consumer_groups_claim: [groups]` + 3 consumer-group entities → consumer_group tile shows "empty"
+    (all calls bucketed under empty; dimension is valid but not populated by dynamic claim mapping).
+  - **Real consumers** (aegis `kong/deck.yaml` has `consumers:` + `consumer_claim: preferred_username`)
+    → the reference's `consumer` tile works. Adopted the same: 3 consumers (dana.dealer/frank.finance/
+    olivia.ops), no credentials, mapped via the listeners' existing consumer_claim+consumer_by.
+- **Reconciles the Slack thread** (kongstrong #… 2026-06-23, Hal + Jack Tysoe): consumer-less attribution
+  IS possible, but for OTHER surfaces — `credential_claim` → AI-RLA rate-limit/cost counters (Hal:
+  "may not appear in Konnect Analytics dashboards which expect real Consumer entities"); consumer_groups_claim
+  → request LOGS / Observability→Requests (Jack: "under logging it will show consumer groups"). Neither
+  feeds the agentic DASHBOARD tiles.
+- **Authz unaffected** by adding consumers: the ai-mcp-proxy ACL is `acl_attribute_type: oauth_access_token`
+  (groups claim); a resolved consumer is used only for analytics/identity. Verified 24/24 `allow` after each
+  change. No standalone `acl` plugin exists to trip on consumer membership.

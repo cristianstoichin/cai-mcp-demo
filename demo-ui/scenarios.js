@@ -43,7 +43,7 @@ export const scenarios = [
     headline: "Each person only gets the tools their group allows",
     proves: "Per-identity tool authorization straight from a JWT groups claim.",
     why: "Frank's groups:[finance] is not in that tool's allow-list [dealers, ops] — blocked at the gateway, never reaches the API.",
-    narration: "Filtering by the token's groups claim (no Kong consumers). olivia (ops) may call list_invoices; frank (finance) may NOT call a dealer tool.",
+    narration: "Filtering by the token's groups claim — the access decision uses no Kong consumers (consumers exist only for analytics attribution). olivia (ops) may call list_invoices; frank (finance) may NOT call a dealer tool.",
     calls: [
       { label: "olivia → list_invoices @ /mcp/ops", persona: "olivia", identity: "Olivia", verdictLabel: "200 · allowed", kind: "mcp",
         path: "/mcp/ops", tool: "list_invoices", args: {}, expect: { verdict: "allow" } },

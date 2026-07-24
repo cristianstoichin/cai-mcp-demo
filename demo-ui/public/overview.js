@@ -58,9 +58,11 @@ export function overviewHTML(scenarios, content) {
     <div class="mscroll"><table class="mtable"><thead><tr>
       <th>MCP tool</th><th>Returns</th><th class="c">Dana</th><th class="c">Frank</th><th class="c">Olivia</th>
     </tr></thead><tbody>${matrix.map(matrixRow).join("")}</tbody></table></div>
-    <p class="mnote">Enforced against the token's <code>groups</code> claim at call time —
-      <b>no Kong consumers, no API keys</b>. Endpoints: <code>/mcp/dealers</code>,
-      <code>/mcp/finance</code>, <code>/mcp/ops</code> (bundle; token-exchange + OPA also run here).</p>
+    <p class="mnote"><b>Authorization</b> is the token's <code>groups</code> claim — no consumer
+      or API-key check gates access. Kong consumer records exist <b>only</b> as identity labels so
+      Konnect analytics attributes each tool call to a person; they play no part in the access decision.
+      Endpoints: <code>/mcp/dealers</code>, <code>/mcp/finance</code>, <code>/mcp/ops</code>
+      (bundle; token-exchange + OPA also run here).</p>
 
     <div class="ov-h2">The seven steps</div>
     <div class="scenes">${scenarios.map(sceneBlock).join("")}</div>
