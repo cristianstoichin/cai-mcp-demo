@@ -50,6 +50,7 @@ services:
               mode: conversion-only
               logging:
                 log_audits: true
+                log_statistics: true
               tools:
                 - name: list_dealer_customers
                   description: >-
@@ -87,6 +88,7 @@ services:
               mode: conversion-only
               logging:
                 log_audits: true
+                log_statistics: true
               tools:
                 - name: list_dealer_vehicles
                   description: >-
@@ -136,6 +138,7 @@ services:
               mode: conversion-only
               logging:
                 log_audits: true
+                log_statistics: true
               tools:
                 - name: list_invoices
                   description: >-
@@ -173,6 +176,7 @@ services:
               mode: conversion-only
               logging:
                 log_audits: true
+                log_statistics: true
               tools:
                 - name: list_floorplans
                   description: >-
@@ -232,6 +236,7 @@ services:
               mode: passthrough-listener
               logging:
                 log_audits: true
+                log_statistics: true
 
   - name: remote-public-mcp-service   # third-party MCP we do NOT own (DeepWiki)
     url: ${{ env "DECK_REMOTE_PUBLIC_MCP_URL" }}
@@ -266,6 +271,7 @@ services:
               mode: passthrough-listener
               logging:
                 log_audits: true
+                log_statistics: true
 
 # =============================================================================
 # MCP listener routes (serviceless). Each aggregates the conversion-only tools
@@ -319,6 +325,7 @@ routes:
             tag: dealer-tools
           logging:
             log_audits: true
+            log_statistics: true
 
   - name: mcp-finance
     paths: [/mcp/finance]
@@ -366,6 +373,7 @@ routes:
             tag: finance-tools
           logging:
             log_audits: true
+            log_statistics: true
 
   - name: mcp-ops
     paths: [/mcp/ops]
@@ -458,6 +466,7 @@ routes:
             tag: bundle-tools
           logging:
             log_audits: true
+            log_statistics: true
 
 # Tool filtering is token-claim based (ai-mcp-proxy listener acl_attribute_type:
 # oauth_access_token + access_token_claim_field: groups), so there are no Kong
