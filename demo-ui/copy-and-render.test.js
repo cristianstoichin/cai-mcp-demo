@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { scenarios } from "./scenarios.js";
 import { personas, matrix, legend } from "./public/content.js";
 import { identityBadge, verdictKind, verdictChip } from "./public/trace.js";
+import { overviewHTML } from "./public/overview.js";
+import contentDefault from "./public/content.js";
 
 test("every scene has customer-facing copy fields", () => {
   assert.equal(scenarios.length, 7);
@@ -75,4 +77,13 @@ test("verdictChip carries the kind class and the label text", () => {
   const c = verdictChip("403 · OPA policy", "deny");
   assert.match(c, /vchip vchip-deny/);
   assert.match(c, /403 · OPA policy/);
+});
+
+test("overviewHTML renders all sections and is customer-safe", () => {
+  const html = overviewHTML(scenarios, contentDefault);
+  for (const n of ["Dana", "Frank", "Olivia"]) assert.match(html, new RegExp(n));
+  for (const t of ["list_dealer_customers", "list_invoices", "list_floorplans"]) assert.match(html, new RegExp(t));
+  for (const s of scenarios) assert.ok(html.includes(s.headline), `missing headline: ${s.headline}`);
+  assert.match(html, /Passed every gate/);
+  assert.ok(!/confusingly wrong|being fixed|gets wrong/i.test(html), "internal callout leaked");
 });

@@ -1,5 +1,7 @@
 // app.js — hash router + the three views. Vanilla ESM, no framework/build.
-import { renderPanel } from "/trace.js";
+import { renderPanel, identityBadge, verdictChip, verdictKind } from "/trace.js";
+import { renderOverview } from "/overview.js";
+import content from "/content.js";
 
 const view = document.getElementById("view");
 const api = {
@@ -171,10 +173,12 @@ function streamAction(action) {
 
 // ---------- ROUTER ----------
 function route() {
-  const h = location.hash || "#/demo";
+  const h = location.hash || "#/overview";
+  if (h.startsWith("#/demo")) return renderDemo();
   if (h.startsWith("#/explore")) return renderExplore();
   if (h.startsWith("#/stack")) return renderStack();
-  return renderDemo();
+  setNav("overview");                          // #/ and #/overview
+  return renderOverview(SCENARIOS, content);
 }
 window.addEventListener("hashchange", route);
 (async function init() {
