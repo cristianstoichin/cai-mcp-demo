@@ -67,6 +67,22 @@ kapi() { # kapi METHOD PATH [json-body]
   printf '%s' "$body"
 }
 
+# >>> write_env_var >>>
+# write_env_var KEY VALUE FILE — set KEY=VALUE in FILE in place, portably.
+# Replaces the line if KEY exists (empty or not), appends if absent. Touches
+# only KEY. No sed -i (GNU/BSD differ): rewrite via awk to a temp file + mv.
+write_env_var() {
+  local key="$1" val="$2" file="$3" tmp
+  [[ -f "$file" ]] || : > "$file"
+  tmp="$(mktemp)"
+  awk -v k="$key" -v v="$val" '
+    $0 ~ "^"k"=" { print k"="v; found=1; next }
+    { print }
+    END { if (!found) print k"="v }
+  ' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+# <<< write_env_var <<<
+
 # --- 1. find or create the control plane ---------------------------------------
 info "looking for control plane '${CP_NAME}'..."
 LIST="$(kapi GET "/control-planes?filter%5Bname%5D%5Beq%5D=${CP_NAME}&page%5Bsize%5D=50")"
@@ -123,21 +139,34 @@ else
   info "cert unchanged — leaving existing pinned certificate(s) in place."
 fi
 
-# --- 4. print the .env lines ---------------------------------------------------
+# --- 4. write + print the .env lines -------------------------------------------
+ENV_FILE="${REPO_DIR}/.env"
+CP_ENDP="$(endp_of "$CP_ENDPOINT")"; TP_ENDP="$(endp_of "$TP_ENDPOINT")"
+if [[ -f "$ENV_FILE" ]]; then
+  cp "$ENV_FILE" "${ENV_FILE}.bak"
+  write_env_var KONNECT_CP_ENDPOINT    "$CP_ENDP" "$ENV_FILE"
+  write_env_var KONNECT_CP_SERVER_NAME "$CP_HOST" "$ENV_FILE"
+  write_env_var KONNECT_TP_ENDPOINT    "$TP_ENDP" "$ENV_FILE"
+  write_env_var KONNECT_TP_SERVER_NAME "$TP_HOST" "$ENV_FILE"
+  ok "wrote CP/TP endpoints into .env (backup at .env.bak)."
+else
+  info "no .env found — printing endpoints for you to add manually."
+fi
+
 cat >&2 <<EOF
 
 $(echo -e "${GREEN}[bootstrap] DONE.${NC}") Control plane '${CP_NAME}' is ready (${CP_ID}).
-
-Append these to your .env (replacing the empty placeholders):
+These values are now in .env (and printed below):
 ------------------------------------------------------------------
 EOF
 cat <<EOF
-KONNECT_CP_ENDPOINT=$(endp_of "$CP_ENDPOINT")
+KONNECT_CP_ENDPOINT=${CP_ENDP}
 KONNECT_CP_SERVER_NAME=${CP_HOST}
-KONNECT_TP_ENDPOINT=$(endp_of "$TP_ENDPOINT")
+KONNECT_TP_ENDPOINT=${TP_ENDP}
 KONNECT_TP_SERVER_NAME=${TP_HOST}
 EOF
 cat >&2 <<EOF
 ------------------------------------------------------------------
 Then: docker compose up -d   &&   docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml
+(or just run ./scripts/setup.sh to do everything.)
 EOF
