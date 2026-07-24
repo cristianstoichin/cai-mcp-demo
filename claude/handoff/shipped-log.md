@@ -74,3 +74,10 @@
 - Empty dashboards → `log_statistics: true` on ai-mcp-proxy (agentic_usage was never emitted).
 - Serviceless-listener tiles re-keyed to `route` + `response_latency_average`.
 - Per-identity attribution: proved dashboard `consumer` dim needs REAL consumers (credential_claim + consumer_groups_claim both empty; aegis confirms). Added 3 consumers (analytics-only; authz still the groups claim). **Verified live — consumer tile shows all three.** DECISIONS U12.
+
+## 2026-07-24 — First-run setup orchestrator + RUNBOOK
+- `scripts/setup.sh` — one-shot gated flow (preflight → ensure-env → bootstrap → up → wait-health →
+  deck sync → wait-routes → opt-in add-ons → smoke). Flags: `--with-dashboard --with-registry --yes --force`.
+- `konnect-bootstrap.sh` now auto-writes CP/TP endpoints into `.env` (portable, idempotent; `.env.bak` backup).
+- `RUNBOOK.md` — standalone first-run guide (prereqs incl. Konnect entitlements → setup → verify → teardown).
+- README points Quickstart at RUNBOOK; `scripts/tests/test-write-env.sh` covers the env writer.

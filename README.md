@@ -66,10 +66,13 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the module + Kong-topology tables, 
 
 ## Quickstart
 
+> **First time? Start with [RUNBOOK.md](./RUNBOOK.md)** — it wraps everything below in one command
+> (`./scripts/setup.sh`). The steps here are the manual equivalent / reference.
+
 ```bash
 cp .env.example .env                 # set KONNECT_TOKEN and KONNECT_REGION (=us)
 ./scripts/konnect-bootstrap.sh       # create the control plane, generate + upload the DP cert,
-                                     # and print CP/TP endpoints to append to .env
+                                     # and write CP/TP endpoints into .env (backup at .env.bak)
 docker compose up -d                 # kong-dp + keycloak + opa + mock services + market-mcp
 docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml
 ```
@@ -164,7 +167,7 @@ the personas/tool-matrix/legend are `demo-ui/public/content.js`; the response→
 - `opa/policies/mcp.rego` — external policy for `/mcp/ops`.
 - `konnect/mcp-registry/*.json` — registry create + publish bodies.
 - `konnect/dashboards/cai-mcp-analytics.json` — the Konnect "Governed MCP" analytics dashboard.
-- `scripts/` — `konnect-bootstrap`, `get-token`, `rebuild`, `registry-setup`, `install-dashboard`,
+- `scripts/` — `setup` (one-shot orchestrator), `konnect-bootstrap`, `get-token`, `rebuild`, `registry-setup`, `install-dashboard`,
   `claude-code-setup`, `demo`, `preflight`, `smoke-test`, `ui` (launches the demo-ui cockpit).
 - `demo-ui/` — host-run Node/Express + vanilla-JS cockpit (server.js + adapters + `public/` SPA).
 - `NOTES.md` — doc-vs-reality findings + verified plugin-schema facts (trust this over memory).
