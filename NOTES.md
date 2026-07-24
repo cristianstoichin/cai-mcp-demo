@@ -289,3 +289,26 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   present on every call; Step-4 shows token BEFORE/AFTER. Explore allow+deny correct; Stack tiles +
   dashboard link resolve. Console clean except a benign `favicon.ico` 404. Screenshots: `verify-overview.png`,
   `verify-demo-step1.png`.
+
+## Doc-vs-reality (2026-07-24) — empty Konnect Observability dashboards → missing log_statistics
+- **Symptom:** the "Governed MCP" analytics dashboard (id 388e3b28…) showed nothing, despite live
+  traffic, config synced, and the DP's analytics **reqlog** telemetry websocket connected
+  (`wss://…tp.konghq.com:443/v1/analytics/reqlog` — verified in `docker compose logs kong-dp`).
+- **Root cause:** every tile in `konnect/dashboards/cai-mcp-analytics.json` uses the **`agentic_usage`**
+  datasource (Kong MCP analytics), which is only populated when the `ai-mcp-proxy` plugin logs
+  statistics. Our plugins had `logging: { log_audits: true }` **only** — no `log_statistics`. So Kong
+  emitted zero agentic records; the datasource stayed empty regardless of traffic. Confirmed by diff vs
+  the aegis reference (`kong/deck.yaml`: every ai-mcp-proxy has `logging.log_statistics: true`) and
+  aegis `konnect/README.md:102` ("`agentic_usage` … requires … `log_statistics: true`").
+- **Fix:** add `log_statistics: true` to all 9 `ai-mcp-proxy` `logging:` blocks; `deck gateway sync`
+  (accepted — Updated 13). Kept **statistics only**, NOT `log_payloads` (that ships request/response
+  bodies — customer/invoice data — to analytics; unnecessary for these tiles + a PII footgun).
+- **agentic_usage feeds off MCP tool CALLS** (`tools/call`, populates `mcp_tool_name`) — REST calls and
+  `tools/list` don't fill the tool-name tiles. Ingest lag ~1–5 min; verify in the Konnect dashboard UI
+  (deep-link from Stack mode), not via API (the agentic query endpoint isn't publicly exposed — all
+  `/vN/analytics/explore` probes 404).
+- **Open items to confirm in the UI:** (a) whether the org/region has the Advanced-Analytics
+  entitlement for `agentic_usage` (if still empty after ingest, this is the next suspect); (b) the
+  `gateway_service` dimension may be sparse for the serviceless listener routes; (c) sanity-check
+  tool-call counts aren't double-counted (conversion-only vs listener emission) — scope `log_statistics`
+  to the serving plugins only if inflated.
