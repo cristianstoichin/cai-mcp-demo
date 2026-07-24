@@ -38,6 +38,16 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   up/down/sync/preflight/smoke/registry-setup + Konnect dashboard deep-link). verdict.js classifier
   (7/7 unit test) maps all 5 live signatures; scenarios.js mirrors demo.sh. `.env` gained UI_PORT +
   KONNECT_DASHBOARD_ID (388e3b28-2162-4d9a-9e17-579045130708). Cox palette approximate (CSS-var swap).
+- **demo-ui Overview + intuitiveness pass — SHIPPED + LIVE-verified (Playwright, 2026-07-24).** Added a
+  4th mode **Overview** ("◉ Overview") as the **default landing** (U10): customer-facing personas +
+  tool-permission matrix + the seven steps + verdict legend, rendered from `scenarios.js` (now the copy
+  SSoT, U11) + new `public/content.js`. Demo mode rewritten (F1–F6): dead global persona buttons removed
+  → per-call **identity badge**; human stepper labels (`railLabel`); `headline`+`proves` header;
+  always-visible verdict legend; call rows lead with the honest per-call `verdictLabel` (never the raw
+  classifier enum — U8 respected). New pure helpers in `public/trace.js` (identityBadge/verdictKind/
+  verdictChip). Tests: `demo-ui/copy-and-render.test.js` (9) + verdict.js (7) = 16/16. Playwright live:
+  all 7 Demo steps × 18 calls `got==expect`; Explore allow+deny; Stack tiles+dashboard; console clean
+  (only benign favicon 404). Screenshots: `verify-overview.png`, `verify-demo-step1.png`.
 
 ## Not yet built
 - **NOTHING core.** The 6-phase build + Konnect dashboard + demo-ui cockpit are COMPLETE and

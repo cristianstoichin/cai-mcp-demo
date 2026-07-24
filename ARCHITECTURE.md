@@ -44,9 +44,10 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 | `demo-ui/server.js` | Host-run Express (binds `127.0.0.1`): serves `public/` + the `/api/*` endpoints; secrets stay server-side. |
 | `demo-ui/config.js` | Env-derived config (mirrors the scripts' defaults) + the persona contract. |
 | `demo-ui/keycloak.js` / `kong.js` / `registry.js` / `stack.js` | Thin I/O adapters: token mint/exchange/decode; MCP+REST calls; Konnect registry discovery; whitelisted stack-action SSE runner. |
-| `demo-ui/verdict.js` (+ `.test.js`) | Pure response-signature → governance verdict classifier (the one unit-tested module). |
-| `demo-ui/scenarios.js` | The 7 Demo steps as data (single source of truth; mirrors `demo.sh`). |
-| `demo-ui/public/` | Vanilla-JS SPA: `index.html` shell, `app.js` router + Demo/Explore/Stack views, `trace.js` hybrid-panel renderer, `styles.css` (Cox palette via CSS variables). |
+| `demo-ui/verdict.js` (+ `.test.js`) | Pure response-signature → governance verdict classifier (the one unit-tested module). Coarse taxonomy (U8) — untouched by the copy layer. |
+| `demo-ui/scenarios.js` | The 7 Demo steps as data — single source of truth for both Demo **and** Overview (U11). Carries the customer-facing copy: `headline`/`proves`/`why`/`railLabel` per scene, `identity`/`verdictLabel` per call. Mirrors `demo.sh`. |
+| `demo-ui/copy-and-render.test.js` | Node `--test`: scenarios copy integrity, `content.js` (personas/matrix) vs `konnect.yaml`, and the pure `trace.js`/`overview.js` string-builders. |
+| `demo-ui/public/` | Vanilla-JS SPA, no build step: `index.html` shell; `app.js` router (default → Overview) + Overview/Demo/Explore/Stack views; `content.js` customer-facing static copy (personas, tool matrix, verdict legend — no secrets); `overview.js` Overview landing view (`overviewHTML` pure builder + DOM attach); `trace.js` hybrid-panel renderer + pure presentation helpers (`identityBadge`/`verdictKind`/`verdictChip`); `styles.css` (Cox palette via CSS variables). |
 | `demo-ui/Dockerfile` | Multi-stage (mirrors the aegis dashboard). The `demo-ui` compose service reaches Kong/Keycloak on the in-network hostnames; published host-local on `127.0.0.1:4000`; read-only Docker socket for the Stack status tiles. Stack execute actions are host-only (`scripts/ui.sh`). |
 
 ## Kong topology (services → routes → plugins)

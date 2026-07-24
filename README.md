@@ -133,9 +133,15 @@ docker compose up -d                       # brings up the whole stack INCLUDING
 scripts/ui.sh                              # Node 20+ host; npm-installs on first run
 ```
 
-Three modes (left nav):
+Four modes (left nav) — the cockpit opens on **Overview** so it explains itself before you drive it:
 
-- **Demo** — the scripted 7-step story with a top stepper; pick a persona, ▶ Run, watch the trace.
+- **Overview** *(default landing)* — a read-first, customer-facing page: who the three people are
+  (Dana / Frank / Olivia), a matrix of which of the four MCP tools each may call, the seven steps
+  (each with a plain "what it proves"), and a legend for reading verdicts. Nothing to run — it's the
+  "what the hell is being demoed" answer.
+- **Demo** — the scripted 7-step story with a top stepper. Each step shows its plain-language headline
+  and "Proves:", then ▶ Run fires the real calls; every call row carries the caller's **identity badge**
+  (`no token` / Dana / Frank / Olivia) and an honest verdict label, over the plugin-chain trace.
 - **Explore** — a free sandbox: choose persona + scope override + endpoint + tool + args → Run.
 - **Stack** — live `docker ps` status tiles + a deep-link to the Konnect "Cox Automotive: Governed MCP"
   analytics dashboard (set `KONNECT_DASHBOARD_ID` in `.env`). The whitelisted **execute** actions
@@ -144,8 +150,10 @@ Three modes (left nav):
   note, because a container shouldn't tear down its own compose project.
 
 Local-only (published on `127.0.0.1`, no UI auth); all secrets (PAT, client secrets) stay server-side
-and never reach the browser. No build step. The 7 steps are data in `demo-ui/scenarios.js` (mirrors
-`demo.sh`); the response→verdict classifier is `demo-ui/verdict.js` (unit-tested, `cd demo-ui && npm test`).
+and never reach the browser. No build step. The 7 steps and their customer-facing copy are data in
+`demo-ui/scenarios.js` (the single source of truth for both Overview and Demo; mirrors `demo.sh`);
+the personas/tool-matrix/legend are `demo-ui/public/content.js`; the response→verdict classifier is
+`demo-ui/verdict.js`. Unit tests: `cd demo-ui && npm test` (verdict classifier + copy/render integrity).
 
 ## Repo layout
 
@@ -187,6 +195,8 @@ and never reach the browser. No build step. The 7 steps are data in `demo-ui/sce
 
 ## Known Issues
 
+- **The cockpit requests `/favicon.ico`** which the server doesn't serve → one harmless `404` in the
+  browser console. Cosmetic only; no functional impact. (Add a favicon route/file to silence it.)
 - **Rule 1 of the OPA policy (finance/ops-only for `list_invoices`) is shadowed by the tool ACL** on
   `/mcp/ops`, so it never independently decides live. It stays as an "entitlement-as-code" illustration;
   the argument-level rule (Rule 2, `query_status=overdue`) is the one that visibly makes OPA the decider.

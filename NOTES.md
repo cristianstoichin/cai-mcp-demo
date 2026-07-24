@@ -273,3 +273,19 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   scope=dealers:read finance:read, groups=[ops] retained, azp flips demo-cli→kong-exchange.
 - ✅ Stack SSE stream verified live (preflight 17/17 streamed to the browser terminal); ANSI color
   codes are stripped server-side in stack.js so the browser terminal shows clean text.
+
+## Build findings (demo-ui) — Overview + intuitiveness pass (2026-07-24), re-verified LIVE
+- 🔑 **Two separate concerns, deliberately (U11 vs U8).** The customer-facing **verdict label** is now
+  per-call data (`scenarios.js verdictLabel`) — e.g. Step-1 call-3 reads "403 · REST scope/audience
+  gate", Step-3 call-2 reads "403 · tool ACL — group not allowed". The **classifier** (`verdict.js`) is
+  UNCHANGED and still coarse (both of those are `acl-deny` by signature — the two 403 body shapes above
+  are indistinguishable). The label is what a human reads; the enum is only used for the live-match
+  check. Never surface the raw enum to the customer.
+- ✅ **Playwright live verification (fresh `--no-cache` demo-ui image).** Overview is the default route
+  and renders personas + the 4-tool matrix (✓/✕ matches `konnect.yaml` allow-lists exactly) + 7 steps +
+  legend, customer-safe (no internal callouts). Demo has **zero** persona buttons (F1); every call shows
+  the right identity badge (Step-1 call-1 = "no token", not a persona). All **7 Demo steps × 18 calls
+  returned `got == expect`** live (trust chip "✓ matches expected · live call" on every row); trace
+  present on every call; Step-4 shows token BEFORE/AFTER. Explore allow+deny correct; Stack tiles +
+  dashboard link resolve. Console clean except a benign `favicon.ico` 404. Screenshots: `verify-overview.png`,
+  `verify-demo-step1.png`.

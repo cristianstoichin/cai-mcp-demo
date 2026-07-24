@@ -12,7 +12,18 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 - **Sync:** `docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml`
 - **Token:** `./scripts/get-token.sh <dana|frank|olivia> [scope-override] [--raw]`
 
-## Since last session (2026-07-22)
+## Since last session (2026-07-24)
+
+- **Overview view + cockpit intuitiveness pass SHIPPED + LIVE-verified (Playwright).** New default
+  landing **Overview** (customer-facing: personas + tool matrix + 7 steps + verdict legend), and Demo
+  rewritten (F1–F6): per-call identity **badges** (no more dead persona buttons), human step labels,
+  honest per-call verdict labels (classifier untouched, U8). Copy is now sourced from `scenarios.js`
+  (SSoT, U11) + `demo-ui/public/content.js`. Decisions U10/U11. Spec+plan dated 2026-07-24. 16/16 unit
+  tests; all 7 Demo steps green live. Screenshots `verify-overview.png` / `verify-demo-step1.png`.
+- **NEXT (UI):** confirm exact Cox palette hex (one-line CSS-var swap); optional favicon to silence the
+  one benign console 404. Deeper Explore-mode polish is available if wanted.
+
+## Earlier (2026-07-22)
 
 - **demo-ui cockpit SHIPPED + LIVE-verified.** Cox-branded host-run cockpit (`demo-ui/`, launch with
   `scripts/ui.sh` → http://127.0.0.1:4000). Demo/Explore/Stack modes drive the real stack and visualize
