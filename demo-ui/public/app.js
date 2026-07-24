@@ -23,34 +23,40 @@ function setNav(mode) {
 }
 
 // ---------- DEMO ----------
+// F1: no global persona buttons — each scripted call carries a fixed `identity`,
+// shown as a per-row badge. F2: stepper uses human `railLabel`. F3: header shows
+// `headline` + `proves`. F5: an always-visible verdict legend bar.
 function renderDemo() {
   setNav("demo");
   const sc = SCENARIOS[state.stepIdx];
   const steps = SCENARIOS.map((s, i) =>
     `<button class="step ${i < state.stepIdx ? "done" : ""} ${i === state.stepIdx ? "cur" : ""}" data-i="${i}">
-       <span class="n">${s.n}</span>${s.tag}</button>`).join("");
-  const personas = PERSONAS.map(p =>
-    `<button class="persbtn ${p === state.persona ? "sel" : ""}" data-p="${p}">${p}</button>`).join("");
+       <span class="n">${s.n}</span><span class="srail">${s.railLabel}</span></button>`).join("");
+  const legendBar = content.legend.map(l =>
+    `<span class="lchip vchip vchip-${l.kind}" title="${l.title} — ${l.desc}">${l.label}</span>`).join("");
   view.innerHTML = `
     <div class="stepper">${steps}</div>
     <div class="content2">
       <div class="row">
-        <div><strong>Step ${sc.n}/7 · ${sc.title}</strong></div>
-        <div>${personas} <button class="runbtn" id="run">▶ Run step</button></div>
+        <div class="stephead"><strong>Step ${sc.n}/7 · ${sc.headline}</strong></div>
+        <button class="runbtn" id="run">▶ Run step</button>
       </div>
-      <p style="color:var(--muted);margin:8px 0">${sc.narration}</p>
+      <p class="sproves"><b>Proves:</b> ${sc.proves}</p>
+      <div class="legendbar">${legendBar}</div>
       <div id="result"></div>
+      <p class="swhy" id="swhy" hidden>${sc.why}</p>
     </div>`;
   view.querySelectorAll(".step").forEach(b => b.onclick = () => { state.stepIdx = +b.dataset.i; renderDemo(); });
-  view.querySelectorAll(".persbtn").forEach(b => b.onclick = () => {
-    state.persona = b.dataset.p;
-    view.querySelectorAll(".persbtn").forEach(x => x.classList.toggle("sel", x.dataset.p === state.persona));
-  });
   view.querySelector("#run").onclick = () => runDemoStep(sc);
 }
 
+// F4: rows lead with identity + outcome (verdictLabel), with the expected/got match
+// kept as a small de-emphasized trust chip (proves it's a live call, not canned).
+// F6: the customer sees `verdictLabel` (honest per-call), never the raw classifier
+// enum; `got` is used only for the live-match check (U8: classifier untouched).
 async function runDemoStep(sc) {
   const out = view.querySelector("#result");
+  const whyEl = view.querySelector("#swhy");
   out.innerHTML = `<p style="color:var(--muted)">Running ${sc.calls.length} call(s)…</p>`;
   const blocks = [];
   for (const call of sc.calls) {
@@ -59,7 +65,7 @@ async function runDemoStep(sc) {
       blocks.push(renderRegistryBlock(r));
       continue;
     }
-    const persona = call.persona === undefined ? state.persona : call.persona;
+    const persona = call.persona === undefined ? null : call.persona;
     const payload = { persona, scope: call.scope, path: call.path,
       method: call.method, tool: call.tool, args: call.args };
     const res = await api.mcp(payload);
@@ -67,17 +73,25 @@ async function runDemoStep(sc) {
     if (sc.showExchange && persona && call.expect.verdict === "allow") {
       exchange = await api.exchangePreview(persona);
     }
-    const match = res.verdict.verdict === call.expect.verdict;
+    const kind = verdictKind(call.expect.verdict, !!sc.showExchange);
+    const got = res.verdict.verdict;
+    const match = got === call.expect.verdict;
     blocks.push(`
       <div class="tile" style="margin-top:10px">
-        <div class="row"><div class="label">${call.label}</div>
-          <div>expected <span class="chip muted">${call.expect.verdict}</span>
-               got <span class="chip ${match ? "ok" : "deny"}">${res.verdict.verdict}</span></div></div>
-        ${call.note ? `<p style="color:var(--muted);font-size:12px;margin:6px 0">${call.note}</p>` : ""}
+        <div class="callhead">
+          ${identityBadge(call.identity)}
+          <span class="calltxt">${call.label}</span>
+          ${verdictChip(call.verdictLabel, kind)}
+        </div>
+        <div class="trust ${match ? "ok" : "bad"}">${match
+          ? "✓ matches expected · live call"
+          : `✗ live call returned <code>${got}</code>, expected <code>${call.expect.verdict}</code>`}</div>
+        ${call.note ? `<p class="callnote">${call.note}</p>` : ""}
         ${renderPanel({ ...res, exchange, showExchange: sc.showExchange })}
       </div>`);
   }
   out.innerHTML = blocks.join("");
+  if (whyEl) whyEl.hidden = false;   // reveal the plain-language "why" after the run
 }
 
 function renderRegistryBlock(r) {
