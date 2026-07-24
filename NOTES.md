@@ -312,3 +312,22 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   `gateway_service` dimension may be sparse for the serviceless listener routes; (c) sanity-check
   tool-call counts aren't double-counted (conversion-only vs listener emission) — scope `log_statistics`
   to the serving plugins only if inflated.
+
+## Doc-vs-reality (2026-07-24) — MCP dashboard: serviceless routes + virtual consumers
+- **Empty "by MCP server" / "upstream latency" tiles → serviceless listener routes.** Our aggregated
+  `/mcp/*` listener routes have NO gateway_service, so agentic_usage `gateway_service` and
+  `upstream_latency_average` are always empty. Fix (dashboard-only, no Kong change): key those tiles on
+  **`route`** (shows `mcp-ops`/`mcp-dealers`/`mcp-finance`) and **`response_latency_average`**. Verified
+  live: "Calls by governed MCP server", "Top MCP servers", "Avg MCP latency" all populate after the swap.
+  aegis's `mcp-analytics.json` uses gateway_service/upstream_latency because ITS MCP routes sit on
+  services; ours are serviceless by the conversion-only+listener split — so re-key to `route`.
+- **Virtual consumers do NOT populate agentic analytics `consumer` — TESTED, FAILED.** `credential_claim`
+  (on openid-connect AND ai-mcp-oauth2; "derive virtual credentials … in case the consumer mapping is not
+  used") creates a claim-derived credential WITHOUT a Kong consumer entity. Set
+  `credential_claim: [preferred_username]` on all 3 listeners (removed consumer_claim so it unambiguously
+  engaged), synced, fired persona-tagged tool calls → the dashboard `consumer`-dimension tile stayed
+  **"No data"** while route/tool/latency dims populated. Conclusion: virtual credentials serve
+  rate-limiting (their documented purpose) but the agentic `consumer` dimension needs a **real Kong
+  consumer entity**. Reverted credential_claim (never committed). Per-identity analytics ⇒ real consumers
+  (mapped via `consumer_claim: [preferred_username]`) or stay consumer-less (identity lives in the cockpit
+  badges). Authz is unaffected either way (token `groups` claim). See [[agentic-usage-needs-log-statistics]].

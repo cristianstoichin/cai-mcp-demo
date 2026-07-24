@@ -1,82 +1,202 @@
 {
-  "_comment": "Cox Automotive — Governed MCP analytics. Tells the story in Konnect: MCP tool-call volume, which governed servers/tools are used, error/denial rate (governance in action), and latency. Uses the agentic_usage datasource (mcp_tool_name / gateway_service dimensions). Upload with scripts/install-dashboard.sh (POST /v2/dashboards, X-Konnect-Beta: true). Data appears once MCP traffic has flowed through Kong.",
+  "_comment": "Cox Automotive \u2014 Governed MCP analytics. Tells the story in Konnect: MCP tool-call volume, which governed servers/tools are used, error/denial rate (governance in action), and latency. Uses the agentic_usage datasource (mcp_tool_name / gateway_service dimensions). Upload with scripts/install-dashboard.sh (POST /v2/dashboards, X-Konnect-Beta: true). Data appears once MCP traffic has flowed through Kong.",
   "template_id": "MCP_ANALYTICS",
   "tiles": [
     {
       "id": "cai-mcp-total-requests",
       "type": "chart",
-      "layout": { "size": { "cols": 1, "rows": 1 }, "position": { "col": 0, "row": 0 } },
+      "layout": {
+        "size": {
+          "cols": 1,
+          "rows": 1
+        },
+        "position": {
+          "col": 0,
+          "row": 0
+        }
+      },
       "definition": {
-        "chart": { "type": "single_value", "chart_title": "MCP tool calls" },
-        "query": { "filters": [], "metrics": ["request_count"], "datasource": "agentic_usage", "dimensions": [] }
+        "chart": {
+          "type": "single_value",
+          "chart_title": "MCP tool calls"
+        },
+        "query": {
+          "filters": [],
+          "metrics": [
+            "request_count"
+          ],
+          "datasource": "agentic_usage",
+          "dimensions": []
+        }
       }
     },
     {
       "id": "cai-mcp-calls-by-server",
       "type": "chart",
-      "layout": { "size": { "cols": 2, "rows": 2 }, "position": { "col": 1, "row": 0 } },
+      "layout": {
+        "size": {
+          "cols": 2,
+          "rows": 2
+        },
+        "position": {
+          "col": 1,
+          "row": 0
+        }
+      },
       "definition": {
-        "chart": { "type": "donut", "chart_title": "Calls by governed MCP server" },
+        "chart": {
+          "type": "donut",
+          "chart_title": "Calls by governed MCP server"
+        },
         "query": {
           "filters": [
-            { "field": "gateway_service", "operator": "not_empty" },
-            { "field": "mcp_tool_name", "operator": "not_empty" }
+            {
+              "field": "route",
+              "operator": "not_empty"
+            },
+            {
+              "field": "mcp_tool_name",
+              "operator": "not_empty"
+            }
           ],
-          "metrics": ["request_count"],
+          "metrics": [
+            "request_count"
+          ],
           "datasource": "agentic_usage",
-          "dimensions": ["gateway_service"]
+          "dimensions": [
+            "route"
+          ]
         }
       }
     },
     {
       "id": "cai-mcp-top-servers",
       "type": "chart",
-      "layout": { "size": { "cols": 3, "rows": 2 }, "position": { "col": 3, "row": 0 } },
+      "layout": {
+        "size": {
+          "cols": 3,
+          "rows": 2
+        },
+        "position": {
+          "col": 3,
+          "row": 0
+        }
+      },
       "definition": {
-        "chart": { "type": "top_n", "chart_title": "Top MCP servers — volume, latency, error/denial rate" },
+        "chart": {
+          "type": "top_n",
+          "chart_title": "Top MCP servers \u2014 volume, latency, error/denial rate"
+        },
         "query": {
           "limit": 10,
           "filters": [],
-          "metrics": ["request_count", "response_latency_average", "error_rate"],
+          "metrics": [
+            "request_count",
+            "response_latency_average",
+            "error_rate"
+          ],
           "datasource": "agentic_usage",
-          "dimensions": ["gateway_service"]
+          "dimensions": [
+            "route"
+          ]
         }
       }
     },
     {
       "id": "cai-mcp-avg-latency",
       "type": "chart",
-      "layout": { "size": { "cols": 1, "rows": 1 }, "position": { "col": 0, "row": 1 } },
+      "layout": {
+        "size": {
+          "cols": 1,
+          "rows": 1
+        },
+        "position": {
+          "col": 0,
+          "row": 1
+        }
+      },
       "definition": {
-        "chart": { "type": "single_value", "chart_title": "Avg MCP latency" },
-        "query": { "filters": [], "metrics": ["upstream_latency_average"], "datasource": "agentic_usage", "dimensions": [] }
+        "chart": {
+          "type": "single_value",
+          "chart_title": "Avg MCP latency"
+        },
+        "query": {
+          "filters": [],
+          "metrics": [
+            "response_latency_average"
+          ],
+          "datasource": "agentic_usage",
+          "dimensions": []
+        }
       }
     },
     {
       "id": "cai-mcp-tool-usage",
       "type": "chart",
-      "layout": { "size": { "cols": 3, "rows": 2 }, "position": { "col": 0, "row": 2 } },
+      "layout": {
+        "size": {
+          "cols": 3,
+          "rows": 2
+        },
+        "position": {
+          "col": 0,
+          "row": 2
+        }
+      },
       "definition": {
-        "chart": { "type": "horizontal_bar", "chart_title": "Tool usage (list_dealer_customers, list_invoices, …)" },
+        "chart": {
+          "type": "horizontal_bar",
+          "chart_title": "Tool usage (list_dealer_customers, list_invoices, \u2026)"
+        },
         "query": {
-          "filters": [ { "field": "mcp_tool_name", "operator": "not_empty" } ],
-          "metrics": ["request_count"],
+          "filters": [
+            {
+              "field": "mcp_tool_name",
+              "operator": "not_empty"
+            }
+          ],
+          "metrics": [
+            "request_count"
+          ],
           "datasource": "agentic_usage",
-          "dimensions": ["mcp_tool_name"]
+          "dimensions": [
+            "mcp_tool_name"
+          ]
         }
       }
     },
     {
       "id": "cai-mcp-latency-by-tool",
       "type": "chart",
-      "layout": { "size": { "cols": 3, "rows": 2 }, "position": { "col": 3, "row": 2 } },
+      "layout": {
+        "size": {
+          "cols": 3,
+          "rows": 2
+        },
+        "position": {
+          "col": 3,
+          "row": 2
+        }
+      },
       "definition": {
-        "chart": { "type": "timeseries_line", "chart_title": "Latency by tool over time" },
+        "chart": {
+          "type": "timeseries_line",
+          "chart_title": "Latency by tool over time"
+        },
         "query": {
-          "filters": [ { "field": "mcp_tool_name", "operator": "not_empty" } ],
-          "metrics": ["response_latency_average"],
+          "filters": [
+            {
+              "field": "mcp_tool_name",
+              "operator": "not_empty"
+            }
+          ],
+          "metrics": [
+            "response_latency_average"
+          ],
           "datasource": "agentic_usage",
-          "dimensions": ["mcp_tool_name"]
+          "dimensions": [
+            "mcp_tool_name"
+          ]
         }
       }
     }
