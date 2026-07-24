@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { scenarios } from "./scenarios.js";
 import { personas, matrix, legend } from "./public/content.js";
+import { identityBadge, verdictKind, verdictChip } from "./public/trace.js";
 
 test("every scene has customer-facing copy fields", () => {
   assert.equal(scenarios.length, 7);
@@ -51,4 +52,27 @@ test("content.legend covers the six verdict kinds", () => {
   assert.equal(legend.length, 6);
   assert.deepEqual(legend.map(l => l.label).sort(),
     ["acl-deny", "auth-fail", "allow", "exchanged", "inner-gate", "opa-deny"].sort());
+});
+
+test("verdictKind maps expect+exchange to a color kind", () => {
+  assert.equal(verdictKind("allow", false), "ok");
+  assert.equal(verdictKind("allow", true), "exch");
+  assert.equal(verdictKind("auth-fail", false), "auth");
+  assert.equal(verdictKind("acl-deny", false), "deny");
+  assert.equal(verdictKind("opa-deny", false), "deny");
+  assert.equal(verdictKind("inner-gate-deny", false), "deny");
+});
+
+test("identityBadge renders a slugged, human badge", () => {
+  const b = identityBadge("no-token");
+  assert.match(b, /idb-no-token/);
+  assert.match(b, /no token/);
+  assert.match(identityBadge("Olivia"), /idb-olivia/);
+  assert.match(identityBadge("Olivia"), />Olivia</);
+});
+
+test("verdictChip carries the kind class and the label text", () => {
+  const c = verdictChip("403 · OPA policy", "deny");
+  assert.match(c, /vchip vchip-deny/);
+  assert.match(c, /403 · OPA policy/);
 });

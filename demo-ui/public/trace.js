@@ -62,6 +62,27 @@ export function renderPanel({ verdict, httpStatus, body, tokenClaims, exchange, 
       <div class="panel kv">${esc(truncate(respText, 1200))}</div></div>`;
 }
 
+// ---- customer-facing presentation helpers (used by Demo + Overview) ----
+
+// Map a call's expected verdict (+ whether the scene shows an exchange) to a color kind.
+export function verdictKind(expectVerdict, showExchange) {
+  if (expectVerdict === "allow") return showExchange ? "exch" : "ok";
+  if (expectVerdict === "auth-fail") return "auth";
+  return "deny"; // acl-deny, opa-deny, inner-gate-deny
+}
+
+// A small identity pill. "no-token" renders as "no token".
+export function identityBadge(identity) {
+  const slug = String(identity).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const text = identity === "no-token" ? "no token" : identity;
+  return `<span class="idb idb-${esc(slug)}">${esc(text)}</span>`;
+}
+
+// A color-coded verdict pill showing the customer-facing label.
+export function verdictChip(label, kind) {
+  return `<span class="vchip vchip-${esc(kind)}">${esc(label)}</span>`;
+}
+
 function verdictHeadline(v) {
   return { "allow": "Allowed.", "auth-fail": "401 Unauthorized.", "acl-deny": "403 Forbidden — ACL.",
     "opa-deny": "403 — OPA policy.", "inner-gate-deny": "Inner-gate 403.", "unknown": "Unexpected." }[v.verdict] || "";
