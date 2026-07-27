@@ -129,41 +129,56 @@ and OPA all still run. `scripts/claude-code-setup.sh` registers five MCP servers
 > Prereqs: the stack is up (`docker compose up -d`) and the `claude` CLI is installed. Both scripts
 > **print** the commands by default; add `--apply` to actually run them.
 
-### Run it — two ways to get a token
+Pick **one** of the two ways to authenticate, then jump to its steps below:
 
-**A) Bearer / ROPC (default, non-interactive — best for a scripted stage demo).** Mints a short-lived
-Keycloak token per persona and injects it as a header:
+| Option | Use it when | How the token is obtained |
+|--------|-------------|---------------------------|
+| **A — Bearer token** | You want a fast, non-interactive hookup (scripted stage demo) | The script mints a per-persona Keycloak token and injects it as a header |
+| **B — Browser login** | You want to show the real end-user OAuth flow | Claude Code runs authorization-code + PKCE; you log in as a persona in the browser |
 
-```bash
-./scripts/claude-code-setup.sh          # prints `claude mcp add` lines (per-persona tokens)
-./scripts/claude-code-setup.sh --apply  # or run them
-```
+Both point every server at Kong, so governance is identical either way.
 
-**B) Browser OAuth (the harness gets a proper token the real way).** Claude Code runs the full
-authorization-code + PKCE flow against Keycloak's pre-built `claude-code` public client — you log in as a
-persona in the browser, no token handling:
+### Option A — Bearer token
 
 ```bash
-./scripts/hosts-alias.sh --apply                 # one-time: pin `keycloak` → 127.0.0.1 in /etc/hosts (sudo)
-./scripts/claude-code-setup.sh --browser --apply # register the 5 servers (no tokens)
-# then run `/mcp` in Claude Code and log in: dana.dealer | frank.finance | olivia.ops  (DEMO_PASSWORD)
+./scripts/claude-code-setup.sh --apply   # registers all 5 servers with per-persona tokens
 ```
 
-Why the host alias: the issuer is pinned to the internal name `keycloak:8080` so a token's `iss` is
-identical whether minted on the host or validated by the Kong DP. Keycloak hands its own
-`keycloak:8080` authorize/token/discovery URLs straight to the browser, so the **host** must resolve
-`keycloak` too (containers already do, via docker DNS). Bare-name resolution is otherwise
-machine-specific (corporate DNS / VPN / Tailscale MagicDNS) — the alias makes it deterministic and
-portable. Keycloak's Dynamic Client Registration is disabled, so `--client-id claude-code` (a static
-pre-registered public client) is required; without it Claude Code errors with *"Incompatible auth
-server: does not support dynamic client registration."* Governance is enforced by the **logged-in
-identity's `groups`** at the tool ACL — e.g. logging in as dana works on `cox-dealers` but is
-ACL-denied on `cox-finance`.
+Tokens are short-lived — just re-run to refresh. (Drop `--apply` to print the commands without running them.)
 
-> **Applying the realm change (browser mode only):** the `claude-code` client's scopes moved to defaults,
-> so after pulling this change recreate Keycloak once to re-import the realm:
-> `docker compose up -d --force-recreate keycloak` (the dev-mode H2 store is ephemeral, so a fresh
-> container re-imports `realm-export.json`).
+### Option B — Browser login
+
+```bash
+# 1. one-time per machine — let the host resolve the Keycloak issuer name (prompts for sudo)
+./scripts/hosts-alias.sh --apply
+
+# 2. register all 5 servers against the pre-built `claude-code` OAuth client (no tokens)
+./scripts/claude-code-setup.sh --browser --apply
+
+# 3. in Claude Code: run `/mcp`, then log in as a persona in the browser that opens
+#    dana.dealer | frank.finance | olivia.ops   (password: value of DEMO_PASSWORD)
+```
+
+The persona you log in as is enforced at the tool ACL — e.g. dana works on `cox-dealers` but is denied
+on `cox-finance`.
+
+> **Was Keycloak already running before you pulled this feature?** Recreate it once so it re-imports the
+> updated realm: `docker compose up -d --force-recreate keycloak`. (A stack you start fresh imports it
+> automatically — no action needed.)
+
+<details>
+<summary>Why the one-time host alias + static client-id?</summary>
+
+The issuer is pinned to the internal name `keycloak:8080` so a token's `iss` is identical whether it's
+minted on the host or validated by the Kong DP. Keycloak hands its own `keycloak:8080`
+authorize/token/discovery URLs straight to the browser, so the **host** must resolve `keycloak` too
+(containers already do, via docker DNS). Bare-name resolution is otherwise machine-specific (corporate
+DNS / VPN / Tailscale MagicDNS), so `hosts-alias.sh` pins it deterministically. Keycloak's Dynamic Client
+Registration is disabled, so `--browser` uses the pre-registered `claude-code` public client via
+`--client-id`; without it Claude Code errors with *"Incompatible auth server: does not support dynamic
+client registration."*
+
+</details>
 
 ### Tear down afterwards
 
