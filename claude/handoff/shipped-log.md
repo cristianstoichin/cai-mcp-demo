@@ -93,6 +93,11 @@
   (finance-only, only via /mcp/finance) were never invoked — `/mcp/ops` bundles only customers+invoices.
   Step 3 now has dana call BOTH dealer tools and frank call BOTH finance tools, so all 4 appear in the
   tile. Both genuine ALLOWs. demo.sh + scenarios.js edited identically; 16/16 tests still pass.
+- **Regression guard added.** `smoke-test.sh` static check #6 derives the converted-tool set from
+  `kong/konnect.yaml` and fails if any tool lacks an ALLOW call in scenarios.js (dashboard source) or a
+  tools/call in demo.sh (mirror). Verified both ways: passes on current state (7/7 static), and fails
+  with "missing an ALLOW call for: list_floorplans" when coverage is dropped. Stops the tool-usage tile
+  from silently under-reporting before a Cox run.
 
 ## 2026-07-24 — First-run setup orchestrator + RUNBOOK
 - `scripts/setup.sh` — one-shot gated flow (preflight → ensure-env → bootstrap → up → wait-health →

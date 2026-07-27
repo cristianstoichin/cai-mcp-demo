@@ -50,6 +50,23 @@ for f in konnect/mcp-registry/publish-*.json; do
 done
 [[ $overlen -eq 0 ]] && pass "registry descriptions <=100 chars"
 
+# 6. demo tool coverage — every REST->MCP converted tool must be exercised by the scripted
+#    story, else the MCP "Tool usage" analytics tile silently under-reports the governed surface
+#    (regression guard; see shipped-log 2026-07-27). Required: an ALLOW call in demo-ui
+#    scenarios.js (what populates the dashboard) AND a tools/call in demo.sh (keep the two mirrored).
+CONVERTED=$(grep -oE 'name: list_[a-z_]+' kong/konnect.yaml | sed 's/name: //' | sort -u)
+miss_scen=""; miss_demo=""
+for t in $CONVERTED; do
+  grep -qE "tool: \"${t}\".*verdict: \"allow\"" demo-ui/scenarios.js || miss_scen="${miss_scen} ${t}"
+  grep -qE "\"name\":\"${t}\"" scripts/demo.sh || miss_demo="${miss_demo} ${t}"
+done
+if [[ -z "$miss_scen" && -z "$miss_demo" ]]; then
+  pass "demo exercises all converted tools ($(echo "$CONVERTED" | wc -w | tr -d ' '): $(echo $CONVERTED | tr '\n' ' '))"
+else
+  [[ -n "$miss_scen" ]] && fail "scenarios.js missing an ALLOW call for:${miss_scen}"
+  [[ -n "$miss_demo" ]] && fail "demo.sh missing a tools/call for:${miss_demo}"
+fi
+
 $STATIC_ONLY && { echo ""; echo -e "Summary: ${GREEN}${PASS} pass${NC}, ${RED}${FAIL} fail${NC}"; [[ $FAIL -eq 0 ]] || exit 1; exit 0; }
 
 echo ""
