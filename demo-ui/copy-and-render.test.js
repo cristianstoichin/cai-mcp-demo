@@ -89,6 +89,15 @@ test("overviewHTML renders all sections and is customer-safe", () => {
   assert.ok(!/confusingly wrong|being fixed|gets wrong/i.test(html), "internal callout leaked");
 });
 
+test("every scene has Present-mode tell-show-tell copy", () => {
+  for (const s of scenarios) {
+    assert.equal(typeof s.setup, "string", `${s.id} setup is a string`);
+    assert.ok(s.setup.trim().length > 0, `${s.id} setup non-empty`);
+    assert.equal(typeof s.takeaway, "string", `${s.id} takeaway is a string`);
+    assert.ok(s.takeaway.trim().length > 0, `${s.id} takeaway non-empty`);
+  }
+});
+
 test("phaseSequence = tell-open + one show per call + tell-close", () => {
   for (const s of scenarios) {
     const seq = phaseSequence(s);

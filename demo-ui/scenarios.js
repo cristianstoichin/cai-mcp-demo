@@ -11,6 +11,8 @@ export const scenarios = [
     id: "oidc", n: 1, title: "REST OIDC gates", tag: "OIDC", railLabel: "Protected APIs",
     headline: "The raw APIs are already protected",
     proves: "Authentication + per-scope authorization at the edge — before MCP exists.",
+    setup: "Before any MCP exists, the raw REST APIs are already locked down. We'll hit the dealer API three ways — no token, the right persona, and the wrong scope — and watch Kong's OIDC gate decide each.",
+    takeaway: "Authentication and scope/audience are enforced at the edge, before a single tool is generated. Now let's turn those same APIs into MCP tools.",
     why: "Dana's token carries dealers:read but not finance:read, so it has no finance-api audience — the finance route rejects it. That is the REST OIDC scope/audience gate, before any MCP tool exists.",
     narration: "The raw APIs are protected before any MCP. No token → 401; dana (dealers:read) → 200; dana on the finance API → 403 (scope+audience).",
     calls: [
@@ -27,6 +29,8 @@ export const scenarios = [
     id: "convert", n: 2, title: "REST → MCP conversion", tag: "CONVERT", railLabel: "REST → MCP",
     headline: "Kong converts those APIs into MCP tools",
     proves: "REST→MCP conversion with zero rewrite of the upstream services.",
+    setup: "Kong converts each governed REST route into an MCP tool and aggregates them by tag. We'll list the tools on three endpoints and see the same APIs show up as callable MCP tools.",
+    takeaway: "One REST surface, now discoverable as MCP tools — with listing open but calls still ungoverned until the next scene. Let's see who is actually allowed to call what.",
     why: "tools/list is never filtered — listing is open; enforcement happens when a tool is actually called (step 3).",
     narration: "Same APIs, now MCP tools, tag-aggregated: /mcp/dealers = 2 tools, /mcp/finance = 2, /mcp/ops = 2 bundled (dealer+finance).",
     calls: [
@@ -42,6 +46,8 @@ export const scenarios = [
     id: "acl", n: 3, title: "Persona tool ACL", tag: "ACL", railLabel: "Per-user tools",
     headline: "Each person only gets the tools their group allows",
     proves: "Per-identity tool authorization straight from a JWT groups claim.",
+    setup: "Every persona gets only the tools their group allows, decided straight from the JWT groups claim — no Kong consumers in the path. Watch each persona call their own tools, and Frank get blocked on a dealer tool.",
+    takeaway: "Per-identity tool authorization from a token claim, enforced at the gateway before the upstream. Next: how a tool-only token still reaches the APIs.",
     why: "Frank's groups:[finance] is not in that tool's allow-list [dealers, ops] — blocked at the gateway, never reaches the API.",
     narration: "Filtering by the token's groups claim — the access decision uses no Kong consumers (consumers exist only for analytics attribution). Each persona may call ALL their group's tools; frank (finance) may NOT call a dealer tool.",
     calls: [
@@ -64,6 +70,8 @@ export const scenarios = [
     showExchange: true,
     headline: "Kong exchanges a narrow token so the call can reach the API",
     proves: "RFC 8693 token exchange — the client never holds API credentials; Kong bridges trust.",
+    setup: "An agent token carrying only mcp:use has none of the API audiences the inner gate needs. On /mcp/ops Kong performs an RFC 8693 exchange; on /mcp/dealers it doesn't. Same token, two outcomes.",
+    takeaway: "Kong bridges the MCP identity to the API identity exactly where policy allows it — no broad-scope tokens handed to agents. Next: a rule the tool ACL can't express.",
     why: "Same token, two routes. On /mcp/ops Kong swaps the audience to [dealer-api, finance-api] so the inner gate passes; on /mcp/dealers there is no exchange, so the inner gate 403s.",
     narration: "A token with ONLY 'mcp:use' lacks the dealer-api/finance-api audiences the inner gates need. On /mcp/ops Kong exchanges it so the call reaches the API; on /mcp/dealers it can't.",
     calls: [
@@ -79,6 +87,8 @@ export const scenarios = [
     id: "opa", n: 5, title: "External OPA policy", tag: "OPA", railLabel: "OPA policy",
     headline: "An external policy decides on the request's arguments",
     proves: "Externalized, argument-aware policy (OPA) that hot-reloads without touching Kong.",
+    setup: "Some rules live in an argument, not a tool name. We'll call an allowed tool with a benign argument, then with query_status=overdue, and let external OPA make the call.",
+    takeaway: "Argument-level policy as code, hot-reloaded with no Kong sync — governance the ACL alone can't reach. Next: governing MCP servers Kong didn't build.",
     why: "Olivia is fully entitled to list_invoices — but the OPA rule denies the overdue filter specifically. Edit mcp.rego and the decision changes live, with no Kong sync.",
     narration: "A rule the tool ACL cannot express: OPA denies list_invoices when the call argument query_status=overdue, even for a permitted caller. opa/policies/mcp.rego hot-reloads with no Kong sync.",
     calls: [
@@ -93,6 +103,8 @@ export const scenarios = [
     id: "remote", n: 6, title: "Passthrough remotes", tag: "REMOTE", railLabel: "Remote MCP",
     headline: "Kong governs MCP servers it didn't even build",
     proves: "One governed front door for any MCP server, including ones you don't own.",
+    setup: "Kong can front MCP servers it never converted — one you own and a third-party one you don't. We'll hit a passthrough remote unauthenticated, then authenticated.",
+    takeaway: "The same OAuth + governance wraps remote MCP servers, including third-party ones — one control plane over all of it. Finally, how clients discover these servers.",
     why: "The remote MCP servers do their own thing upstream; Kong still requires a valid cox-auto token before anything reaches them.",
     narration: "Govern MCP servers Kong did not convert. /mcp/remote → local market-mcp (Cox tools); /mcp/remote-public → DeepWiki (third-party). Both require a cox-auto token.",
     calls: [
@@ -106,6 +118,8 @@ export const scenarios = [
     id: "registry", n: 7, title: "MCP Registry discovery", tag: "REGISTRY", railLabel: "Registry",
     headline: "Every server is discoverable in the Konnect MCP Registry",
     proves: "Governed discovery — a sanctioned catalog, not ad-hoc URLs.",
+    setup: "Every governed server is published to the Konnect MCP Registry so any client can discover it by its canonical URL. We'll list what's discoverable right now.",
+    takeaway: "Discovery, governance, and analytics for MCP in one place — the full Cox governed-MCP story, end to end.",
     why: "dealers, finance, ops, remote (market-mcp), remote-public (DeepWiki) — each advertised at its http://localhost:8000/mcp/* address, discoverable by any host client.",
     narration: "The servers are catalogued in Konnect's MCP Registry — discoverable by any host-side client (e.g. Claude Code).",
     calls: [
