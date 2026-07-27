@@ -112,12 +112,73 @@ Each step runs live against the stack. Expected results:
    `/mcp/remote-public` authed → DeepWiki tools (`ask_question`, `read_wiki_contents`, `read_wiki_structure`). A valid cox-auto token is required for the third-party server.
 7. **MCP Registry** — `scripts/registry-setup.sh` publishes and discovers all 5 servers in Konnect.
 
-Hook Claude Code up to the governed servers:
+## Connect Claude Code (MCP client)
+
+Point Claude Code (or any MCP harness) at the governed servers. Every tool call goes through Kong
+(`:8000`) no matter how the token was obtained, so OAuth validation, tool ACLs, RFC 8693 token exchange,
+and OPA all still run. `scripts/claude-code-setup.sh` registers five MCP servers:
+
+| Server | Route | Default persona |
+|--------|-------|-----------------|
+| `cox-dealers` | `/mcp/dealers` | dana (dealers) |
+| `cox-finance` | `/mcp/finance` | frank (finance) |
+| `cox-ops` | `/mcp/ops` | olivia (ops — both groups; the token-exchange route) |
+| `cox-market` | `/mcp/remote` | olivia (passthrough → local market-mcp) |
+| `cox-deepwiki` | `/mcp/remote-public` | olivia (passthrough → third-party DeepWiki) |
+
+> Prereqs: the stack is up (`docker compose up -d`) and the `claude` CLI is installed. Both scripts
+> **print** the commands by default; add `--apply` to actually run them.
+
+### Run it — two ways to get a token
+
+**A) Bearer / ROPC (default, non-interactive — best for a scripted stage demo).** Mints a short-lived
+Keycloak token per persona and injects it as a header:
 
 ```bash
 ./scripts/claude-code-setup.sh          # prints `claude mcp add` lines (per-persona tokens)
 ./scripts/claude-code-setup.sh --apply  # or run them
 ```
+
+**B) Browser OAuth (the harness gets a proper token the real way).** Claude Code runs the full
+authorization-code + PKCE flow against Keycloak's pre-built `claude-code` public client — you log in as a
+persona in the browser, no token handling:
+
+```bash
+./scripts/hosts-alias.sh --apply                 # one-time: pin `keycloak` → 127.0.0.1 in /etc/hosts (sudo)
+./scripts/claude-code-setup.sh --browser --apply # register the 5 servers (no tokens)
+# then run `/mcp` in Claude Code and log in: dana.dealer | frank.finance | olivia.ops  (DEMO_PASSWORD)
+```
+
+Why the host alias: the issuer is pinned to the internal name `keycloak:8080` so a token's `iss` is
+identical whether minted on the host or validated by the Kong DP. Keycloak hands its own
+`keycloak:8080` authorize/token/discovery URLs straight to the browser, so the **host** must resolve
+`keycloak` too (containers already do, via docker DNS). Bare-name resolution is otherwise
+machine-specific (corporate DNS / VPN / Tailscale MagicDNS) — the alias makes it deterministic and
+portable. Keycloak's Dynamic Client Registration is disabled, so `--client-id claude-code` (a static
+pre-registered public client) is required; without it Claude Code errors with *"Incompatible auth
+server: does not support dynamic client registration."* Governance is enforced by the **logged-in
+identity's `groups`** at the tool ACL — e.g. logging in as dana works on `cox-dealers` but is
+ACL-denied on `cox-finance`.
+
+> **Applying the realm change (browser mode only):** the `claude-code` client's scopes moved to defaults,
+> so after pulling this change recreate Keycloak once to re-import the realm:
+> `docker compose up -d --force-recreate keycloak` (the dev-mode H2 store is ephemeral, so a fresh
+> container re-imports `realm-export.json`).
+
+### Tear down afterwards
+
+`claude-code-teardown.sh` is the inverse of setup — it unregisters the five servers and (opt-in) removes
+the host alias. It does **not** stop the stack, so re-running the demo later is one command.
+
+```bash
+./scripts/claude-code-teardown.sh --apply               # unregister the MCP servers from Claude Code
+./scripts/claude-code-teardown.sh --apply --with-hosts  # also remove the /etc/hosts keycloak alias
+docker compose down                                     # stop the stack   (add -v for a full reset)
+```
+
+Browser mode caches an OAuth token in your system keychain; `claude mcp remove` (which teardown runs)
+drops the server entry — to clear the cached credential too, use the auth controls under `/mcp` in
+Claude Code, or delete the MCP entry in Keychain Access.
 
 ## demo-ui — the visual cockpit
 

@@ -370,3 +370,44 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   Fired a timestamped burst (6× each of vehicles+floorplans) to re-check after ingest. If still absent
   after ~10 min → genuine ai-mcp-proxy emission issue; fetch the plugin's statistics reference from
   developer.konghq.com (don't guess the schema).
+
+## Doc-vs-reality (2026-07-27) — interactive Claude Code browser OAuth: hostname + static client
+
+Resolves the Phase-2 open caveat (NOTES.md line ~122) and next.md item 4. Curl-with-bearer was
+unaffected; this is only about the **interactive** browser OAuth flow.
+
+- **Root cause confirmed by the live discovery chain.** Kong's protected-resource metadata correctly
+  advertises the host-reachable `resource: http://localhost:8000/mcp/*`, but points at
+  `authorization_servers: [http://keycloak:8080/realms/cox-auto]`, and Keycloak's own
+  `.well-known/openid-configuration` returns `authorization_endpoint`/`token_endpoint`/`jwks_uri` all
+  under `http://keycloak:8080` (because `KC_HOSTNAME` is pinned to the internal name so token `iss` is
+  identical host-side and DP-side). The browser + the Claude Code process run on the **host**, which
+  does not resolve the docker name `keycloak` → the auth-code flow can't reach the authorize/token URLs.
+- 🔧 **The bare name `keycloak` resolving on the host is NOT reliable** — observed it "resolve" on this
+  Mac via **Tailscale MagicDNS** (`100.100.100.100`, search domain `*.ts.net`) while
+  `socket.gethostbyname('keycloak')` actually failed and curl connected to `:0`. Non-deterministic per
+  machine; absent entirely on a fresh Cox laptop. **Fix: pin it in `/etc/hosts`** (`127.0.0.1 keycloak`)
+  via `scripts/hosts-alias.sh --apply` — deterministic, portable, and overrides any stray VPN/MagicDNS
+  entry. Chosen over changing the issuer to `localhost:8080` (would break the DP: Kong would then try to
+  fetch discovery/JWKS from `localhost:8080` **inside its own container**). Single-issuer `keycloak:8080`
+  is preserved everywhere; **no Kong/issuer/`konnect.yaml` change**.
+- ✅ **Keycloak Dynamic Client Registration is disabled**, so Claude Code's default DCR path fails
+  ("Incompatible auth server: does not support dynamic client registration"). Use the pre-built
+  `claude-code` **public** client (auth code + PKCE S256, wildcard loopback redirects
+  `http://localhost:*` / `http://127.0.0.1:*`) via Claude Code's documented static-client flags:
+  `claude mcp add --transport http <name> <url> --client-id claude-code`. No `--callback-port` needed —
+  the wildcard redirect covers Claude Code's random callback port. (`scripts/claude-code-setup.sh --browser`.)
+- 🔧 **Made the `claude-code` client's `dealers:read`/`finance:read`/`mcp:use` scopes DEFAULT** (were
+  optional) so a browser-obtained token always carries the `dealer-api`/`finance-api` audiences +
+  `mcp:use` (exchangeable on `/mcp/ops`) regardless of what scope param the harness sends. Authorization
+  is unchanged — still the token's `groups` claim at the tool ACL, so the logged-in persona's
+  entitlement is enforced (dana logs in → `cox-dealers` OK, `cox-finance` ACL-denied). `demo-cli` (ROPC)
+  scoping is untouched. Did NOT inject a `_comment` field into the client JSON — Keycloak realm import
+  can reject non-schema keys; rationale lives here instead.
+- **Applying the realm edit:** dev-mode Keycloak uses ephemeral H2 and only imports on a fresh container,
+  so `docker compose up -d --force-recreate keycloak` re-imports `realm-export.json`. `--import-realm`
+  will not overwrite an already-imported realm in a persisted store.
+- ⚠️ **PKCE not confirmed in Claude Code's public docs** (the `claude-code` client enforces S256). The
+  MCP auth spec mandates PKCE and Claude Code implements it, so this is expected to work; if a browser
+  login ever fails at the token step with a PKCE error, relax enforcement by removing the client's
+  `pkce.code.challenge.method` attribute. Verify live at demo time (browser step needs a human).

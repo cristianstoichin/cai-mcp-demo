@@ -70,6 +70,21 @@ curl -s http://localhost:8000/mcp/ops -H "Authorization: Bearer $TOKEN" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
+### 4a. Connect a harness (Claude Code) to the governed MCP servers
+
+```bash
+# Bearer (default): short-lived per-persona token injected as a header — non-interactive.
+./scripts/claude-code-setup.sh --apply
+
+# OR browser OAuth (Claude Code runs the real auth-code + PKCE flow against Keycloak):
+./scripts/hosts-alias.sh --apply                  # one-time: pin `keycloak` → 127.0.0.1 (sudo)
+./scripts/claude-code-setup.sh --browser --apply  # register; then run `/mcp` in Claude Code and log in
+```
+
+Browser mode uses the pre-built `claude-code` public client (DCR is off, so `--client-id` is required).
+If you just pulled the browser-OAuth change, re-import the realm once:
+`docker compose up -d --force-recreate keycloak`. Details: **[README.md](./README.md)** → *Hook Claude Code up*.
+
 ## 5. Tear down / reset
 
 ```bash
@@ -89,6 +104,7 @@ idempotent and will reuse it.
 | Stage 5 Keycloak/Kong timeout | `docker compose logs keycloak` / `kong-dp`; re-run once Docker settles |
 | Stage 6 deck sync error | `docker compose --profile tools run --rm deck gateway validate /config/konnect.yaml` |
 | Every token 401s at Kong | Keep the `iss` pin — see README → Troubleshooting |
+| Browser OAuth: can't reach `keycloak:8080` / DCR error | `scripts/hosts-alias.sh --apply`; use `--client-id claude-code` (DCR is off) |
 | `--with-registry` 404/permission | Enable Labs "Catalog - MCP Registry" (US only) |
 
 Full troubleshooting and per-step demo expectations: **[README.md](./README.md)**.

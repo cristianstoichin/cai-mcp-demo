@@ -116,3 +116,26 @@
 - `konnect-bootstrap.sh` now auto-writes CP/TP endpoints into `.env` (portable, idempotent; `.env.bak` backup).
 - `RUNBOOK.md` — standalone first-run guide (prereqs incl. Konnect entitlements → setup → verify → teardown).
 - README points Quickstart at RUNBOOK; `scripts/tests/test-write-env.sh` covers the env writer.
+
+## 2026-07-27 — Interactive Claude Code browser OAuth
+- **Closes the last open item (next.md #4).** Curl-with-bearer already worked; this makes the *browser*
+  authorization-code + PKCE flow work end-to-end, so a harness gets a proper token the real way.
+- `scripts/hosts-alias.sh` (new) — pins `keycloak → 127.0.0.1` in the host `/etc/hosts` so the browser +
+  Claude Code can resolve the pinned issuer name (containers already do via docker DNS). Print by default;
+  `--apply`/`--remove` use sudo with a reversible `# cai-mcp-demo` marker. Root cause: the bare name
+  resolved only via flaky Tailscale MagicDNS on this Mac; absent on a fresh laptop. No issuer/Kong change.
+- `scripts/claude-code-setup.sh` — added `--browser` mode: registers the 5 servers against the pre-built
+  `claude-code` public client with `--client-id claude-code` (Keycloak DCR is off, so a static client is
+  required), no tokens. Warns if the host can't reach `keycloak:8080`. Default bearer/ROPC mode unchanged;
+  also fixed a latent broken `||`/`&&` precedence in the old `claude`-CLI presence check.
+- `keycloak/realm-export.json` — `claude-code` client's `dealers:read`/`finance:read`/`mcp:use` moved from
+  optional to **default** scopes so the browser token is usable on every route; authorization still by the
+  `groups` claim at the tool ACL. Apply with `docker compose up -d --force-recreate keycloak` (re-import).
+- Docs: README *Hook Claude Code up* (A bearer / B browser), RUNBOOK §4a + troubleshooting row, NOTES.md
+  (2026-07-27 browser OAuth resolution), DECISIONS (2026-07-27).
+- `scripts/claude-code-teardown.sh` (new) — inverse of setup: unregisters the 5 MCP servers from
+  Claude Code (print by default, `--apply` executes), `--with-hosts` also removes the /etc/hosts alias.
+  Does not stop the stack. README *Hook Claude Code up* → *Tear down the hookup*.
+- **Static-verified:** realm JSON valid + scopes assert; both script modes syntax-check + dry-run; bearer
+  mode still mints real tokens. **Live/human steps (not run here):** sudo `/etc/hosts` edit, keycloak
+  force-recreate, and the browser click-through login.

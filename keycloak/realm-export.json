@@ -229,13 +229,12 @@
       "defaultClientScopes": [
         "basic",
         "identity",
-        "groups"
-      ],
-      "optionalClientScopes": [
+        "groups",
         "dealers:read",
         "finance:read",
         "mcp:use"
-      ]
+      ],
+      "optionalClientScopes": []
     },
     {
       "clientId": "kong-exchange",
