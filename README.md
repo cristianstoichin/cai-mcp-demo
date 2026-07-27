@@ -163,8 +163,14 @@ The persona you log in as is enforced at the tool ACL — e.g. dana works on `co
 on `cox-finance`.
 
 > **Was Keycloak already running before you pulled this feature?** Recreate it once so it re-imports the
-> updated realm: `docker compose up -d --force-recreate keycloak`. (A stack you start fresh imports it
-> automatically — no action needed.)
+> updated realm, then bounce the data plane so it drops its stale JWKS cache (a fresh Keycloak rotates
+> its signing keys — without this, new tokens 401):
+> ```bash
+> docker compose up -d --force-recreate keycloak && docker compose restart kong-dp
+> ```
+> A stack you start fresh imports the realm automatically — no action needed. Symptom if you skip the
+> re-import: the browser login succeeds but tool calls 403 with *"required scopes are missing"* (the
+> token lacks `dealers:read`/etc. because those scopes were still optional on the old `claude-code` client).
 
 <details>
 <summary>Why the one-time host alias + static client-id?</summary>

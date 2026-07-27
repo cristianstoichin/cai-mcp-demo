@@ -445,3 +445,30 @@ The browser was opened at `http://localhost:8000/authorize` (Kong origin) instea
   (a manually-added unrelated hosts entry survived, so the file isn't wiped wholesale — the keycloak line
   was removed specifically). Always re-run `scripts/hosts-alias.sh --apply` before Option B and verify
   `curl http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration` returns 200 from the host.
+
+## Doc-vs-reality (2026-07-27) — browser OAuth 403 "required scopes are missing" + key-rotation gotcha
+
+Symptom: logged in as dana.dealer via browser OAuth, `Connected to cox-dealers` succeeds, but both
+dealer tool calls return **403**. Kong error log pinpoints it — NOT the tool ACL (which passed), but the
+INNER openid-connect gate on the forwarded REST route:
+`[openid-connect] required scopes are missing. Found: [ groups ]  (GET /api/dealers/customers)`.
+
+- **Root cause:** the browser token's `scope` claim was `groups` only — **missing `dealers:read`**. The
+  realm was never re-imported after the scope change, so the RUNNING `claude-code` client still had
+  `dealers:read`/`finance:read`/`mcp:use` as **optional** (confirmed live via admin API: running
+  default=[identity,groups], file default=[...,dealers:read,finance:read,mcp:use]). Claude Code's
+  auth-code flow doesn't request optional scopes, so the token lacked `dealers:read` → the inner gate
+  (`scopes_required` on `/api/dealers/*`) 403s. The tool ACL had already passed (dana ∈ dealers), which
+  is why the failure is at the REST gate, not the ACL. Fix = re-import the realm
+  (`docker compose up -d --force-recreate keycloak`) so those scopes are default (always issued).
+- 🔧 **Key-rotation gotcha (undocumented, important for handoff):** `realm-export.json` ships **no
+  signing keys** (verified: no `components.KeyProvider`, no `privateKey`), so every `--force-recreate`
+  of Keycloak **rotates the realm signing keys**. The Kong DP caches JWKS (`jwks_cache_ttl` 3600s), so
+  after a recreate the DP rejects freshly-minted tokens (new `kid`) until the cache expires — a demo-day
+  401 trap. **Always `docker compose restart kong-dp` after recreating Keycloak** to drop the stale JWKS
+  cache (the DP re-pulls config from the CP and re-fetches JWKS from the new Keycloak). README's
+  realm-recreate note updated to include the DP bounce. Verified: after recreate+bounce, ROPC dana →
+  `tools/call list_dealer_customers` on /mcp/dealers returns live data (full chain healthy).
+- Reminder: the `/etc/hosts` keycloak pin is still required for the browser's Keycloak leg — re-apply
+  `scripts/hosts-alias.sh --apply` and re-authenticate in Claude Code (the old cached token is now
+  invalid on both counts: missing scope AND signed with a rotated-away key).
