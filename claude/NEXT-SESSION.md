@@ -5,7 +5,7 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 - **Branch:** `feat/cai-mcp-demo-build` (build in progress; merge to `main` when demo verified end-to-end)
 - **Design spec:** `claude/specs/2026-07-22-cai-mcp-demo-design.md`
 - **Plan:** `claude/plans/2026-07-22-cai-mcp-demo-implementation.md` (6 phases)
-- **Konnect:** live CP `cai-mcp-demo` (id `007f4c01-74b6-44ff-810e-4620e01be51b`), region `us`.
+- **Konnect:** live CP `cai-mcp-demo` (id `<your-control-plane-id>`), region `us`.
   Shared PAT is in `~/workspace/github/aegis-insurance-ai-gateway-demo/secrets.env` (`DECK_KONNECT_TOKEN`).
   `.env` is already populated (gitignored); `certs/` already generated + pinned.
 - **Dev loop:** edit → `./scripts/rebuild.sh <svc>` (always `--no-cache`) → `deck ... gateway sync` → verify LIVE

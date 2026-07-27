@@ -24,7 +24,7 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   passthrough_credentials:false. Both 401 unauth; authed tools/list + market-mcp tools/call work.
 
 - **Phase 6 — registry + scripts + README.** MCP Registry live (cai-mcp-registry id
-  e32046ce-ca93-4d02-aa40-eb9aa1eaca7b; 5 servers published/discoverable). Scripts: registry-setup,
+  `<your-mcp-registry-id>`; 5 servers published/discoverable). Scripts: registry-setup,
   claude-code-setup, demo (7 steps), preflight (17/17), smoke-test (14/14). README finalized (mermaid,
   walkthrough, troubleshooting, Known Issues). ARCHITECTURE reconciled.
 
@@ -37,7 +37,7 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   (free persona/scope/endpoint/tool/args sandbox), Stack (compose status tiles + whitelisted SSE actions
   up/down/sync/preflight/smoke/registry-setup + Konnect dashboard deep-link). verdict.js classifier
   (7/7 unit test) maps all 5 live signatures; scenarios.js mirrors demo.sh. `.env` gained UI_PORT +
-  KONNECT_DASHBOARD_ID (388e3b28-2162-4d9a-9e17-579045130708). Cox palette approximate (CSS-var swap).
+  KONNECT_DASHBOARD_ID (`<your-dashboard-id>`). Cox palette approximate (CSS-var swap).
 - **demo-ui Overview + intuitiveness pass — SHIPPED + LIVE-verified (Playwright, 2026-07-24).** Added a
   4th mode **Overview** ("◉ Overview") as the **default landing** (U10): customer-facing personas +
   tool-permission matrix + the seven steps + verdict legend, rendered from `scenarios.js` (now the copy

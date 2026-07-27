@@ -70,7 +70,7 @@
   Step-4 exchange BEFORE/AFTER token panels, Explore OPA-deny (query_status=overdue), Stack preflight
   17/17 streamed. All 5 verdict signatures re-verified live through `/api/mcp` (NOTES.md demo-ui block);
   verdict.js unit test 7/7. Cox palette approximate (CSS-var swap). `.env` gained UI_PORT +
-  KONNECT_DASHBOARD_ID (=388e3b28-2162-4d9a-9e17-579045130708 for this org).
+  KONNECT_DASHBOARD_ID (=`<your-dashboard-id>` for this org).
 - **2026-07-22** — **demo-ui containerized** (reverses U6 → DECISIONS U9). Added `demo-ui` as a Compose
   service (multi-stage `demo-ui/Dockerfile`, mirrors the aegis dashboard) so `docker compose up` runs
   the whole demo in one command; reaches Kong/Keycloak in-network (kong-dp:8000 / keycloak:8080),
