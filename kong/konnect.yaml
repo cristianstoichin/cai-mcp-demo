@@ -279,6 +279,38 @@ services:
 # ai-mcp-oauth2 in front of these; consumer-group ACLs live on the conversion tools.
 # =============================================================================
 routes:
+  # RFC 9728 Protected-Resource-Metadata discovery shim.
+  # MCP clients (e.g. Claude Code) fetch PRM at the path-INSERTION location
+  # `/.well-known/oauth-protected-resource<resource-path>` (RFC 9728 §3.1), but ai-mcp-oauth2
+  # (Kong 3.14) only serves it at the path-APPEND location
+  # `<resource-path>/.well-known/oauth-protected-resource`, which is not configurable
+  # (see NOTES.md 2026-07-27). Without this the insertion-form request 404s at the Kong router
+  # (before any plugin runs), the client can't discover the authorization server, falls back to
+  # the Kong origin as the AS, and the browser opens `http://localhost:8000/authorize`
+  # -> "no Route matched". This serviceless route serves the PRM directly at the RFC 9728 location
+  # (no redirect, so it works even for clients that won't follow 3xx on metadata). The two literals
+  # below MIRROR the ai-mcp-oauth2 `resource` base + `authorization_servers` (canonical demo
+  # constants, already literals throughout this file) — keep them in sync if either changes.
+  - name: mcp-prm-rfc9728
+    paths: [/.well-known/oauth-protected-resource/mcp]
+    strip_path: false
+    plugins:
+      - name: pre-function
+        instance_name: prm-rfc9728
+        config:
+          access:
+            - |
+              local path = kong.request.get_path()
+              local prefix = "/.well-known/oauth-protected-resource"
+              local rest = string.sub(path, #prefix + 1)
+              if not rest or rest == "" then
+                return kong.response.exit(404, { message = "not found" })
+              end
+              return kong.response.exit(200, {
+                resource = "http://localhost:8000" .. rest,
+                authorization_servers = { "http://keycloak:8080/realms/cox-auto" },
+              }, { ["Content-Type"] = "application/json" })
+
   - name: mcp-dealers
     paths: [/mcp/dealers]
     methods: [GET, POST, DELETE]

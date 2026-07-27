@@ -411,3 +411,37 @@ unaffected; this is only about the **interactive** browser OAuth flow.
   MCP auth spec mandates PKCE and Claude Code implements it, so this is expected to work; if a browser
   login ever fails at the token step with a PKCE error, relax enforcement by removing the client's
   `pkce.code.challenge.method` attribute. Verify live at demo time (browser step needs a human).
+
+## Doc-vs-reality (2026-07-27) — browser OAuth "no Route matched": RFC 9728 PRM discovery-path mismatch
+
+Symptom: Option B (browser OAuth), the browser opens and shows Kong **"no Route matched with those
+values"**. Captured live in `docker compose logs kong-dp`:
+`GET /authorize?...client_id=claude-code...redirect_uri=http://localhost:60350/callback → 404` (Chrome UA).
+The browser was opened at `http://localhost:8000/authorize` (Kong origin) instead of Keycloak.
+
+- **Root cause (verified by the DP access log, not guessed).** Claude Code (RFC 9728 §3.1) fetches the
+  Protected Resource Metadata at the **path-INSERTION** location
+  `/.well-known/oauth-protected-resource/mcp/dealers`, but `ai-mcp-oauth2` (EE 3.14.0.2) serves it only
+  at the **path-APPEND** location `/mcp/dealers/.well-known/oauth-protected-resource`. Confirmed against
+  the current reference (developer.konghq.com/plugins/ai-mcp-oauth2/reference/): `metadata_endpoint`
+  default is `$resource/.well-known/oauth-protected-resource` (append form); **the docs never mention
+  RFC 9728 and there is no config for the insertion form.** The insertion request 404s at the Kong
+  **router** (before any plugin runs), so `metadata_endpoint` can't fix it — the path matches no route.
+  With PRM undiscoverable, Claude Code falls back to treating the MCP server origin as the auth server
+  and builds `localhost:8000/authorize` → Kong 404. (The client's `/.well-known/oauth-authorization-server`
+  + `/.well-known/openid-configuration` origin probes 404 too — expected fallbacks, moot once PRM works.)
+- 🔧 **Fix: a serviceless route `mcp-prm-rfc9728`** (path prefix `/.well-known/oauth-protected-resource/mcp`)
+  with a `pre-function` that **serves the PRM directly at the RFC 9728 location** (HTTP 200,
+  `{resource, authorization_servers}` computed from the captured resource path). Chose serve-directly over
+  a 302→append-form redirect so it works even for OAuth clients that refuse to follow 3xx on metadata
+  endpoints (anti-spoofing). The two literals in the function (`http://localhost:8000` base +
+  `http://keycloak:8080/realms/cox-auto`) MIRROR the ai-mcp-oauth2 `resource`/`authorization_servers`
+  (canonical demo constants) — keep in sync. Verified live: all 5 insertion-form URLs → 200 with correct
+  resource + AS; deck validate/sync clean; bearer/curl path unaffected.
+- ⚠️ **Compounding gotcha — the `/etc/hosts` keycloak pin must be present for the NEXT hop.** After PRM
+  discovery the client fetches AS metadata from `keycloak:8080` and opens the browser there; if the host
+  can't resolve `keycloak`, that hop fails and the client falls back to `localhost:8000/authorize` — the
+  SAME "no Route matched" symptom, now for a different reason. The pin was observed missing mid-session
+  (a manually-added unrelated hosts entry survived, so the file isn't wiped wholesale — the keycloak line
+  was removed specifically). Always re-run `scripts/hosts-alias.sh --apply` before Option B and verify
+  `curl http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration` returns 200 from the host.
