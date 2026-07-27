@@ -24,9 +24,10 @@
 
 | File | Responsibility |
 |------|----------------|
-| `demo-ui/public/present.js` (create) | Present view + per-scene phase state machine; pure `phaseSequence()`; reuses `trace.js` + injected `api` |
+| `demo-ui/public/trace.js` (modify) | Add shared `renderCallRow(sc, call, res, exchange)` (extracted from Demo's inline markup; single source for both Demo + Present) |
+| `demo-ui/public/present.js` (create) | Present view + per-scene phase state machine; pure `phaseSequence()`; reuses `trace.js` (incl. `renderCallRow`) + injected `api` |
 | `demo-ui/scenarios.js` (modify) | Add `setup` + `takeaway` string to each of the 7 scene objects |
-| `demo-ui/public/app.js` (modify) | Import `renderPresent`; add `#/present` route + `setNav("present")` |
+| `demo-ui/public/app.js` (modify) | Refactor `runDemoStep` to use `renderCallRow`; import `renderPresent`; add `#/present` route + `setNav("present")` |
 | `demo-ui/public/index.html` (modify) | Add the `Present` navitem between Demo and Explore |
 | `demo-ui/public/styles.css` (modify) | `.tellcard`, `.telltext`, `.takeaway`, `.pphase`, `.showrows` |
 | `demo-ui/copy-and-render.test.js` (modify) | Assert `setup`/`takeaway` present; assert `phaseSequence` shape |
@@ -75,8 +76,8 @@ Create `demo-ui/public/present.js`:
 // present.js — Present mode: self-driven tell-show-tell walkthrough (manual Next).
 // Renders from the SAME scenarios.js as Demo/Overview; reuses trace.js renderers and
 // the api client injected by app.js. Pure phaseSequence() is unit-tested under node.
-// Relative import so this loads under both the browser (served from /) and node --test.
-import { renderPanel, identityBadge, verdictChip, verdictKind } from "./trace.js";
+// (Task 4 adds `import { renderCallRow } from "./trace.js";` when the view is added —
+// relative import so this loads under both the browser (served from /) and node --test.)
 
 // Pure: the ordered phases for a scene. Exported for unit tests.
 export function phaseSequence(scene) {
@@ -179,18 +180,92 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 3: Present view + phase state machine
+## Task 3: Extract `renderCallRow()` into trace.js; refactor Demo to use it
+
+**Files:**
+- Modify: `demo-ui/public/trace.js` (add `renderCallRow`)
+- Modify: `demo-ui/public/app.js` (import it; use it in `runDemoStep`)
+
+**Interfaces:**
+- Produces: `renderCallRow(sc, call, res, exchange) -> string` — the call-row tile markup (identity badge, verdict chip, live-match trust line, optional note, `renderPanel`). Consumed by Demo (Task 3) and Present (Task 4). Behavior-preserving: identical HTML to Demo's current inline block.
+
+- [ ] **Step 1: Add `renderCallRow` to trace.js**
+
+Append to `demo-ui/public/trace.js` (it already exports `identityBadge`, `verdictChip`, `verdictKind`, `renderPanel`):
+
+```js
+// Shared call-row tile for Demo + Present. `res` is the /api/mcp response; `exchange`
+// is the optional exchange-preview (or null). Customer sees verdictLabel (U8/U11);
+// `got` only drives the live-match trust chip.
+export function renderCallRow(sc, call, res, exchange) {
+  const kind = verdictKind(call.expect.verdict, !!sc.showExchange);
+  const got = res.verdict.verdict, match = got === call.expect.verdict;
+  return `
+    <div class="tile" style="margin-top:10px">
+      <div class="callhead">${identityBadge(call.identity)}<span class="calltxt">${call.label}</span>${verdictChip(call.verdictLabel, kind)}</div>
+      <div class="trust ${match ? "ok" : "bad"}">${match
+        ? "✓ matches expected · live call"
+        : `✗ live call returned <code>${got}</code>, expected <code>${call.expect.verdict}</code>`}</div>
+      ${call.note ? `<p class="callnote">${call.note}</p>` : ""}
+      ${renderPanel({ ...res, exchange, showExchange: sc.showExchange })}
+    </div>`;
+}
+```
+
+- [ ] **Step 2: Import it in app.js**
+
+In `demo-ui/public/app.js` line 2, add `renderCallRow` to the trace import:
+
+```js
+import { renderPanel, identityBadge, verdictChip, verdictKind, renderCallRow } from "/trace.js";
+```
+
+- [ ] **Step 3: Use it in `runDemoStep` (replace the inline block)**
+
+In `runDemoStep` (app.js ~lines 76–91), replace the inline `kind`/`got`/`match`/`blocks.push(\`…\`)` block with:
+
+```js
+    const exchange = (sc.showExchange && persona && call.expect.verdict === "allow")
+      ? await api.exchangePreview(persona) : null;
+    blocks.push(renderCallRow(sc, call, res, exchange));
+```
+
+Remove the now-dead lines that computed `exchange` earlier in the loop and the old `kind`/`got`/`match` locals + the inline `blocks.push` template, so the loop keeps: registry short-circuit → build `payload` → `res = await api.mcp(payload)` → the two lines above.
+
+- [ ] **Step 4: Verify Demo unchanged (tests + node import)**
+
+Run: `cd demo-ui && node --test copy-and-render.test.js 2>&1 | tail -5`
+Expected: all pass (trace.js still imports cleanly; no test asserts the inline form).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add demo-ui/public/trace.js demo-ui/public/app.js
+git commit -m "refactor(demo-ui): extract renderCallRow() to trace.js (shared Demo/Present)
+
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Task 4: Present view + phase state machine
 
 **Files:**
 - Modify: `demo-ui/public/present.js` (add the view + machine below the pure function)
 
 **Interfaces:**
-- Consumes: `phaseSequence` (Task 1), scene `setup`/`takeaway` (Task 2), `trace.js` helpers, injected `ctx = { view, scenarios, api }`.
+- Consumes: `phaseSequence` (Task 1), scene `setup`/`takeaway` (Task 2), `trace.js` helpers incl. `renderCallRow` (Task 3), injected `ctx = { view, scenarios, api }`.
 - Produces: `renderPresent(ctx)` — entrypoint app.js calls on `#/present`. Module-local state `ps = { sceneIdx, pi }` + `revealed[]`.
 
 - [ ] **Step 1: Append the view + state machine to `present.js`**
 
-Append to `demo-ui/public/present.js`:
+First add the trace import at the **top** of `demo-ui/public/present.js` (below the header comment, above `phaseSequence`):
+
+```js
+import { renderCallRow } from "./trace.js";
+```
+
+Then append the view + state machine:
 
 ```js
 let ctx = null;                     // { view, scenarios, api }
@@ -282,21 +357,9 @@ async function revealCall(sc, call) {
   const payload = { persona, scope: call.scope, path: call.path,
     method: call.method, tool: call.tool, args: call.args };
   const res = await ctx.api.mcp(payload);
-  let exchange = null;
-  if (sc.showExchange && persona && call.expect.verdict === "allow") {
-    exchange = await ctx.api.exchangePreview(persona);
-  }
-  const kind = verdictKind(call.expect.verdict, !!sc.showExchange);
-  const got = res.verdict.verdict, match = got === call.expect.verdict;
-  revealed.push(`
-    <div class="tile" style="margin-top:10px">
-      <div class="callhead">${identityBadge(call.identity)}<span class="calltxt">${call.label}</span>${verdictChip(call.verdictLabel, kind)}</div>
-      <div class="trust ${match ? "ok" : "bad"}">${match
-        ? "✓ matches expected · live call"
-        : `✗ live call returned <code>${got}</code>, expected <code>${call.expect.verdict}</code>`}</div>
-      ${call.note ? `<p class="callnote">${call.note}</p>` : ""}
-      ${renderPanel({ ...res, exchange, showExchange: sc.showExchange })}
-    </div>`);
+  const exchange = (sc.showExchange && persona && call.expect.verdict === "allow")
+    ? await ctx.api.exchangePreview(persona) : null;
+  revealed.push(renderCallRow(sc, call, res, exchange));   // shared with Demo (Task 3)
 }
 
 function registryRow(r) {
@@ -322,7 +385,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 4: Wire the route, nav item, and styles
+## Task 5: Wire the route, nav item, and styles
 
 **Files:**
 - Modify: `demo-ui/public/app.js` (import + route + setNav)
@@ -330,7 +393,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Modify: `demo-ui/public/styles.css` (Present-specific styles)
 
 **Interfaces:**
-- Consumes: `renderPresent` (Task 3). Produces: `#/present` reachable and styled.
+- Consumes: `renderPresent` (Task 4). Produces: `#/present` reachable and styled.
 
 - [ ] **Step 1: Import `renderPresent` in app.js**
 
@@ -404,13 +467,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 5: Live drive + docs
+## Task 6: Live drive + docs
 
 **Files:**
 - Modify: `claude/DECISIONS.md`, `claude/handoff/shipped-log.md`, `README.md`
 
 **Interfaces:**
-- Consumes: Tasks 1–4. Produces: verified feature + recorded history.
+- Consumes: Tasks 1–5. Produces: verified feature + recorded history.
 
 - [ ] **Step 1: Drive `#/present` end-to-end with Playwright (one full scene)**
 
