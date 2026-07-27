@@ -186,6 +186,9 @@ client registration."*
 
 </details>
 
+**Persona demo flows** (success & failure by identity, with the exact prompts to type into Claude Code):
+see [`claude/handoff/claude-code-demo.md`](claude/handoff/claude-code-demo.md).
+
 ### Tear down afterwards
 
 `claude-code-teardown.sh` is the inverse of setup — it unregisters the five servers and (opt-in) removes
