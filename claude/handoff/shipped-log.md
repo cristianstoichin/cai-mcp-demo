@@ -86,7 +86,13 @@
   All three personas now generate attributable MCP traffic from the scripted story; the ACL step also
   reads stronger (each persona CAN call its own group's tools, CANNOT call others'). Edits demo.sh +
   scenarios.js identically. Static-verified (ACL allow-lists, 16/16 demo-ui tests); live consumer-tile
-  confirmation is the org-owner's UI check.
+  confirmation is the org-owner's UI check. **Live-confirmed by Paul: consumer tile shows all three.**
+- **Follow-on (same session): full tool coverage.** The "Tool usage" tile only counts `tools/call`
+  invocations; the story called just 2 of the 4 converted tools (`list_dealer_customers`,
+  `list_invoices`). `list_dealer_vehicles` (only reachable via /mcp/dealers) and `list_floorplans`
+  (finance-only, only via /mcp/finance) were never invoked — `/mcp/ops` bundles only customers+invoices.
+  Step 3 now has dana call BOTH dealer tools and frank call BOTH finance tools, so all 4 appear in the
+  tile. Both genuine ALLOWs. demo.sh + scenarios.js edited identically; 16/16 tests still pass.
 
 ## 2026-07-24 — First-run setup orchestrator + RUNBOOK
 - `scripts/setup.sh` — one-shot gated flow (preflight → ensure-env → bootstrap → up → wait-health →
