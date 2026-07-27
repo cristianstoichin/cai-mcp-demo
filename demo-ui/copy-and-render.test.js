@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { scenarios } from "./scenarios.js";
 import { personas, matrix, legend } from "./public/content.js";
+import { phaseSequence } from "./public/present.js";
 import { identityBadge, verdictKind, verdictChip } from "./public/trace.js";
 import { overviewHTML } from "./public/overview.js";
 import contentDefault from "./public/content.js";
@@ -86,4 +87,15 @@ test("overviewHTML renders all sections and is customer-safe", () => {
   for (const s of scenarios) assert.ok(html.includes(s.headline), `missing headline: ${s.headline}`);
   assert.match(html, /Passed every gate/);
   assert.ok(!/confusingly wrong|being fixed|gets wrong/i.test(html), "internal callout leaked");
+});
+
+test("phaseSequence = tell-open + one show per call + tell-close", () => {
+  for (const s of scenarios) {
+    const seq = phaseSequence(s);
+    assert.equal(seq[0], "tell-open", `${s.id} starts tell-open`);
+    assert.equal(seq[seq.length - 1], "tell-close", `${s.id} ends tell-close`);
+    assert.equal(seq.length, s.calls.length + 2, `${s.id} length`);
+    assert.equal(seq.filter(p => p.startsWith("show:")).length, s.calls.length, `${s.id} show count`);
+    assert.deepEqual(seq.slice(1, -1), s.calls.map((_, i) => `show:${i}`), `${s.id} show order`);
+  }
 });
