@@ -165,3 +165,11 @@ a.link { color: #7fb0ff; }
   border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
 .legt { font-size:12.5px; color: var(--muted); }
 .legt b { display:block; color: var(--text); margin-bottom:1px; }
+
+/* Present mode — tell-show-tell walkthrough */
+.pphase { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.tellcard { background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 18px; margin: 12px 0; }
+.tellcard.takeaway { border-left: 3px solid var(--pass); }
+.telltext { font-size: 16px; line-height: 1.5; margin: 0 0 8px; }
+.showrows { min-height: 40px; }

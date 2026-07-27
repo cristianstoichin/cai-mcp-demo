@@ -1,6 +1,7 @@
 // app.js — hash router + the three views. Vanilla ESM, no framework/build.
-import { renderPanel, identityBadge, verdictChip, verdictKind, renderCallRow } from "/trace.js";
+import { renderPanel, renderCallRow } from "/trace.js";
 import { renderOverview } from "/overview.js";
+import { renderPresent } from "/present.js";
 import content from "/content.js";
 
 const view = document.getElementById("view");
@@ -172,6 +173,7 @@ function streamAction(action) {
 function route() {
   const h = location.hash || "#/overview";
   if (h.startsWith("#/demo")) return renderDemo();
+  if (h.startsWith("#/present")) { setNav("present"); return renderPresent({ view, scenarios: SCENARIOS, api }); }
   if (h.startsWith("#/explore")) return renderExplore();
   if (h.startsWith("#/stack")) return renderStack();
   setNav("overview");                          // #/ and #/overview
