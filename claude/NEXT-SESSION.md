@@ -19,7 +19,7 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
   rewritten (F1–F6): per-call identity **badges** (no more dead persona buttons), human step labels,
   honest per-call verdict labels (classifier untouched, U8). Copy is now sourced from `scenarios.js`
   (SSoT, U11) + `demo-ui/public/content.js`. Decisions U10/U11. Spec+plan dated 2026-07-24. 16/16 unit
-  tests; all 7 Demo steps green live. Screenshots `verify-overview.png` / `verify-demo-step1.png`.
+  tests; all 7 Demo steps green live. Screenshots `claude/specs/visuals/2026-07-24-demo-ui-verification/verify-overview.png` / `claude/specs/visuals/2026-07-24-demo-ui-verification/verify-demo-step1.png`.
 - **NEXT (UI):** confirm exact Cox palette hex (one-line CSS-var swap); optional favicon to silence the
   one benign console 404. Deeper Explore-mode polish is available if wanted.
 

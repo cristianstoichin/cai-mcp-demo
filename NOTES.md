@@ -287,8 +287,8 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   the right identity badge (Step-1 call-1 = "no token", not a persona). All **7 Demo steps × 18 calls
   returned `got == expect`** live (trust chip "✓ matches expected · live call" on every row); trace
   present on every call; Step-4 shows token BEFORE/AFTER. Explore allow+deny correct; Stack tiles +
-  dashboard link resolve. Console clean except a benign `favicon.ico` 404. Screenshots: `verify-overview.png`,
-  `verify-demo-step1.png`.
+  dashboard link resolve. Console clean except a benign `favicon.ico` 404. Screenshots: `claude/specs/visuals/2026-07-24-demo-ui-verification/verify-overview.png`,
+  `claude/specs/visuals/2026-07-24-demo-ui-verification/verify-demo-step1.png`.
 
 ## Doc-vs-reality (2026-07-24) — empty Konnect Observability dashboards → missing log_statistics
 - **Symptom:** the "Governed MCP" analytics dashboard (id 388e3b28…) showed nothing, despite live

@@ -47,7 +47,7 @@ _Updated 2026-07-22 (through Phase 5, LIVE-verified against org)._
   classifier enum — U8 respected). New pure helpers in `public/trace.js` (identityBadge/verdictKind/
   verdictChip). Tests: `demo-ui/copy-and-render.test.js` (9) + verdict.js (7) = 16/16. Playwright live:
   all 7 Demo steps × 18 calls `got==expect`; Explore allow+deny; Stack tiles+dashboard; console clean
-  (only benign favicon 404). Screenshots: `verify-overview.png`, `verify-demo-step1.png`.
+  (only benign favicon 404). Screenshots: `claude/specs/visuals/2026-07-24-demo-ui-verification/verify-overview.png`, `claude/specs/visuals/2026-07-24-demo-ui-verification/verify-demo-step1.png`.
 
 ## Not yet built
 - **NOTHING core.** The 6-phase build + Konnect dashboard + demo-ui cockpit are COMPLETE and
