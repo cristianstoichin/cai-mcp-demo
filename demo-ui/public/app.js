@@ -1,5 +1,5 @@
 // app.js — hash router + the three views. Vanilla ESM, no framework/build.
-import { renderPanel, identityBadge, verdictChip, verdictKind } from "/trace.js";
+import { renderPanel, identityBadge, verdictChip, verdictKind, renderCallRow } from "/trace.js";
 import { renderOverview } from "/overview.js";
 import content from "/content.js";
 
@@ -69,26 +69,9 @@ async function runDemoStep(sc) {
     const payload = { persona, scope: call.scope, path: call.path,
       method: call.method, tool: call.tool, args: call.args };
     const res = await api.mcp(payload);
-    let exchange = null;
-    if (sc.showExchange && persona && call.expect.verdict === "allow") {
-      exchange = await api.exchangePreview(persona);
-    }
-    const kind = verdictKind(call.expect.verdict, !!sc.showExchange);
-    const got = res.verdict.verdict;
-    const match = got === call.expect.verdict;
-    blocks.push(`
-      <div class="tile" style="margin-top:10px">
-        <div class="callhead">
-          ${identityBadge(call.identity)}
-          <span class="calltxt">${call.label}</span>
-          ${verdictChip(call.verdictLabel, kind)}
-        </div>
-        <div class="trust ${match ? "ok" : "bad"}">${match
-          ? "✓ matches expected · live call"
-          : `✗ live call returned <code>${got}</code>, expected <code>${call.expect.verdict}</code>`}</div>
-        ${call.note ? `<p class="callnote">${call.note}</p>` : ""}
-        ${renderPanel({ ...res, exchange, showExchange: sc.showExchange })}
-      </div>`);
+    const exchange = (sc.showExchange && persona && call.expect.verdict === "allow")
+      ? await api.exchangePreview(persona) : null;
+    blocks.push(renderCallRow(sc, call, res, exchange));
   }
   out.innerHTML = blocks.join("");
   if (whyEl) whyEl.hidden = false;   // reveal the plain-language "why" after the run

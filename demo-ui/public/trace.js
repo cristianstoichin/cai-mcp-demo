@@ -83,6 +83,23 @@ export function verdictChip(label, kind) {
   return `<span class="vchip vchip-${esc(kind)}">${esc(label)}</span>`;
 }
 
+// Shared call-row tile for Demo + Present. `res` is the /api/mcp response; `exchange`
+// is the optional exchange-preview (or null). Customer sees verdictLabel (U8/U11);
+// `got` only drives the live-match trust chip.
+export function renderCallRow(sc, call, res, exchange) {
+  const kind = verdictKind(call.expect.verdict, !!sc.showExchange);
+  const got = res.verdict.verdict, match = got === call.expect.verdict;
+  return `
+    <div class="tile" style="margin-top:10px">
+      <div class="callhead">${identityBadge(call.identity)}<span class="calltxt">${call.label}</span>${verdictChip(call.verdictLabel, kind)}</div>
+      <div class="trust ${match ? "ok" : "bad"}">${match
+        ? "✓ matches expected · live call"
+        : `✗ live call returned <code>${got}</code>, expected <code>${call.expect.verdict}</code>`}</div>
+      ${call.note ? `<p class="callnote">${call.note}</p>` : ""}
+      ${renderPanel({ ...res, exchange, showExchange: sc.showExchange })}
+    </div>`;
+}
+
 function verdictHeadline(v) {
   return { "allow": "Allowed.", "auth-fail": "401 Unauthorized.", "acl-deny": "403 Forbidden — ACL.",
     "opa-deny": "403 — OPA policy.", "inner-gate-deny": "Inner-gate 403.", "unknown": "Unexpected." }[v.verdict] || "";
