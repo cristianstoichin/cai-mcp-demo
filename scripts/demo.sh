@@ -52,10 +52,12 @@ pause
 
 # ---------------------------------------------------------------------------
 step "3. Persona tool ACL — filtering by the token's groups claim (no Kong consumers)"
-note "olivia (ops) may call list_invoices; frank (finance) may NOT call a dealer tool."
+note "Each persona may call their own group's tools; frank (finance) may NOT call a dealer tool."
 FRANK=$(tok frank)
-echo -n "  olivia list_invoices via /mcp/ops           -> "; rpc /mcp/ops "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_invoices","arguments":{}}}' | grep -q 'count' && echo -e "${GREEN}ALLOW (data)${NC}" || echo -e "${RED}?${NC}"
-echo -n "  frank  list_dealer_customers via /mcp/ops    -> HTTP "; code /mcp/ops "$FRANK" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_dealer_customers","arguments":{}}}'; echo -e " ${YELLOW}(403 = ACL deny)${NC}"
+echo -n "  dana   list_dealer_customers via /mcp/dealers -> "; rpc /mcp/dealers "$DANA"   '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_dealer_customers","arguments":{}}}' | grep -q 'count' && echo -e "${GREEN}ALLOW (data)${NC}" || echo -e "${RED}?${NC}"
+echo -n "  frank  list_invoices via /mcp/finance         -> "; rpc /mcp/finance "$FRANK"  '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_invoices","arguments":{}}}' | grep -q 'count' && echo -e "${GREEN}ALLOW (data)${NC}" || echo -e "${RED}?${NC}"
+echo -n "  olivia list_invoices via /mcp/ops             -> "; rpc /mcp/ops "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_invoices","arguments":{}}}' | grep -q 'count' && echo -e "${GREEN}ALLOW (data)${NC}" || echo -e "${RED}?${NC}"
+echo -n "  frank  list_dealer_customers via /mcp/ops     -> HTTP "; code /mcp/ops "$FRANK" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_dealer_customers","arguments":{}}}'; echo -e " ${YELLOW}(403 = ACL deny)${NC}"
 pause
 
 # ---------------------------------------------------------------------------

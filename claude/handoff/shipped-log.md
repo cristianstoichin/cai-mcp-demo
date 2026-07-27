@@ -75,6 +75,19 @@
 - Serviceless-listener tiles re-keyed to `route` + `response_latency_average`.
 - Per-identity attribution: proved dashboard `consumer` dim needs REAL consumers (credential_claim + consumer_groups_claim both empty; aegis confirms). Added 3 consumers (analytics-only; authz still the groups claim). **Verified live — consumer tile shows all three.** DECISIONS U12.
 
+## 2026-07-27 — Step 3 exercises all three personas on MCP (consumer-tile fix)
+- **Root cause:** the "Tool calls by consumer" tile is fed by MCP `agentic_usage` (only `/mcp/*`
+  listener traffic, which carries `consumer_claim`/`consumer_by`). In the scripted 7-step story
+  (demo.sh + demo-ui), **dana made only REST calls** (Step 1) and **frank's only MCP call was a
+  403 ACL-deny** — so running the scenarios alone never surfaced dana (and made frank flaky) on the
+  tile. U12's "all three verified" came from ad-hoc calls, not the scripted demo.
+- **Fix:** Step 3 now runs `dana → list_dealer_customers @ /mcp/dealers` (ALLOW) and
+  `frank → list_invoices @ /mcp/finance` (ALLOW) before the existing olivia-allow / frank-deny rows.
+  All three personas now generate attributable MCP traffic from the scripted story; the ACL step also
+  reads stronger (each persona CAN call its own group's tools, CANNOT call others'). Edits demo.sh +
+  scenarios.js identically. Static-verified (ACL allow-lists, 16/16 demo-ui tests); live consumer-tile
+  confirmation is the org-owner's UI check.
+
 ## 2026-07-24 — First-run setup orchestrator + RUNBOOK
 - `scripts/setup.sh` — one-shot gated flow (preflight → ensure-env → bootstrap → up → wait-health →
   deck sync → wait-routes → opt-in add-ons → smoke). Flags: `--with-dashboard --with-registry --yes --force`.
