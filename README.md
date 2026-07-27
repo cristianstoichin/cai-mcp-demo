@@ -136,7 +136,7 @@ docker compose up -d                       # brings up the whole stack INCLUDING
 scripts/ui.sh                              # Node 20+ host; npm-installs on first run
 ```
 
-Four modes (left nav) — the cockpit opens on **Overview** so it explains itself before you drive it:
+Five modes (left nav) — the cockpit opens on **Overview** so it explains itself before you drive it:
 
 - **Overview** *(default landing)* — a read-first, customer-facing page: who the three people are
   (Dana / Frank / Olivia), a matrix of which of the four MCP tools each may call, the seven steps
@@ -145,6 +145,10 @@ Four modes (left nav) — the cockpit opens on **Overview** so it explains itsel
 - **Demo** — the scripted 7-step story with a top stepper. Each step shows its plain-language headline
   and "Proves:", then ▶ Run fires the real calls; every call row carries the caller's **identity badge**
   (`no token` / Dana / Frank / Olivia) and an honest verdict label, over the plugin-chain trace.
+- **Present** — the same 7 scenes as a self-driven **tell-show-tell** walkthrough: ▶ Run enters a
+  scene, then one **Next ▸** advances the setup Tell → each live call (one per click, cumulative) → the
+  takeaway Tell → the next scene. Presenter/self-paced; identical live calls to Demo, single-sourced from
+  `scenarios.js`.
 - **Explore** — a free sandbox: choose persona + scope override + endpoint + tool + args → Run.
 - **Stack** — live `docker ps` status tiles + a deep-link to the Konnect "Cox Automotive: Governed MCP"
   analytics dashboard (set `KONNECT_DASHBOARD_ID` in `.env`). The whitelisted **execute** actions

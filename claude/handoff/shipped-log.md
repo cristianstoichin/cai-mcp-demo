@@ -1,5 +1,16 @@
 # shipped-log.md — append-only
 
+## 2026-07-27 — Present mode (tell-show-tell cockpit walkthrough)
+- New 5th cockpit tab **Present**: ▶ Run enters a scene; one **Next ▸** advances tell-open → each
+  live call (one per click, cumulative) → tell-close (takeaway) → next scene. Manual, presenter/self-driven.
+- `demo-ui/public/present.js` — phase state machine + pure `phaseSequence()` (unit-tested); reuses
+  `trace.js` renderers + injected `api`. Demo mode unchanged; both render from `scenarios.js`.
+- Extracted shared `renderCallRow()` into `trace.js` (Demo + Present) + removed dead app.js imports.
+- `scenarios.js` gained `setup`/`takeaway` tell-show-tell copy per scene.
+- `smoke-test.sh` (from earlier) still 7/7; demo-ui tests 11/11 (phaseSequence + setup/takeaway).
+- Built via SDD (6 tasks, per-task spec+quality review). **Live-driven via Playwright** end-to-end:
+  tell-open → 3 live calls (401/200-data/403) → takeaway → next scene → stepper jump reset. Rebuilt no-cache.
+
 - **2026-07-22** — Repo init + design spec + phased plan.
 - **2026-07-22** — Phase 1: dealer-svc + finance-svc mock APIs, Keycloak cox-auto realm
   (scopes/groups/users/3 clients + self-owned identity scope), compose subset, .env.example,
