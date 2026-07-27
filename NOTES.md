@@ -350,3 +350,23 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   (groups claim); a resolved consumer is used only for analytics/identity. Verified 24/24 `allow` after each
   change. No standalone `acl` plugin exists to trip on consumer membership.
 - ✅ **VERIFIED LIVE (2026-07-24):** the 'Tool calls by consumer' tile shows all three (dana.dealer / frank.finance / olivia.ops). Real-consumer attribution confirmed end-to-end.
+
+## Doc-vs-reality (2026-07-27) — consumer + tool tiles only populate from actual MCP tool calls
+- **A consumer/tool only appears on the agentic tiles if that identity makes a `tools/call` through a
+  `/mcp/*` listener.** The scripted 7-step story originally had **dana on REST-only** (Step 1, `/api/*`,
+  no consumer mapping) and **frank on a single 403 ACL-deny**, so running the scenarios never surfaced
+  dana on the consumer tile (U12's "all three" earlier came from ad-hoc calls). Fixed: Step 3 now runs a
+  successful MCP tool call for dana AND frank, and exercises **all 4 converted tools** (dana calls both
+  dealer tools, frank both finance tools) — `list_dealer_vehicles` is only reachable via /mcp/dealers,
+  `list_floorplans` only via /mcp/finance (/mcp/ops bundles only customers+invoices). demo.sh +
+  demo-ui/scenarios.js edited identically. Added a `smoke-test.sh` static guard (#6) that fails if the
+  demo doesn't `tools/call` every converted tool from kong/konnect.yaml.
+- ✅ Consumer tile re-verified: shows all three.
+- ⚠️ **OPEN:** the 'Tool usage' tile (`mcp_tool_name`, filter = `not_empty`, NOT a name whitelist) still
+  showed only the 2 historically-called tools (customers, invoices) after all 4 were called live — even
+  though the new calls succeed, count in request_count, and are consumer-attributed (dana=2). Config is
+  identical across the 3 listeners and all 4 conversion plugins have `log_statistics: true`, so config is
+  NOT the cause. Working hypothesis: **ingestion lag on first-seen `mcp_tool_name` dimension values**.
+  Fired a timestamped burst (6× each of vehicles+floorplans) to re-check after ingest. If still absent
+  after ~10 min → genuine ai-mcp-proxy emission issue; fetch the plugin's statistics reference from
+  developer.konghq.com (don't guess the schema).
