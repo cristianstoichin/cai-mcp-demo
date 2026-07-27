@@ -1,8 +1,8 @@
 // present.js — Present mode: self-driven tell-show-tell walkthrough (manual Next).
 // Renders from the SAME scenarios.js as Demo/Overview; reuses trace.js renderers and
 // the api client injected by app.js. Pure phaseSequence() is unit-tested under node.
-// (Task 4 adds `import { renderCallRow } from "./trace.js";` when the view is added —
-// relative import so this loads under both the browser (served from /) and node --test.)
+// renderCallRow below is imported with a RELATIVE path so this module loads under
+// both the browser (served from /) and node --test.
 
 import { renderCallRow } from "./trace.js";
 
@@ -90,10 +90,14 @@ async function onNext() {
 
 // Fire one call live and append its row. Same payload + row markup as Demo's runDemoStep.
 async function revealCall(sc, call) {
+  const sceneAtStart = ps.sceneIdx;             // guard: bail if a stepper jump lands us on a new scene mid-flight
   const btn = ctx.view.querySelector("#pnext");
   if (btn) { btn.disabled = true; btn.textContent = "Running…"; }
+  ctx.view.querySelectorAll(".step").forEach(b => b.disabled = true);
   if (call.kind === "registry") {
-    revealed.push(registryRow(await ctx.api.registry()));
+    const registry = await ctx.api.registry();
+    if (ps.sceneIdx !== sceneAtStart) return;   // scene changed while awaiting — discard stale result
+    revealed.push(registryRow(registry));
     return;
   }
   const persona = call.persona === undefined ? null : call.persona;
@@ -102,10 +106,12 @@ async function revealCall(sc, call) {
   const res = await ctx.api.mcp(payload);
   const exchange = (sc.showExchange && persona && call.expect.verdict === "allow")
     ? await ctx.api.exchangePreview(persona) : null;
+  if (ps.sceneIdx !== sceneAtStart) return;     // scene changed while awaiting — discard stale result
   revealed.push(renderCallRow(sc, call, res, exchange));   // shared with Demo (Task 3)
 }
 
 function registryRow(r) {
+  if (r.error) return `<div class="tile" style="margin-top:10px"><div class="callhead"><span class="calltxt">Konnect MCP Registry</span></div><p style="color:var(--warn)">Registry error: ${r.error}</p></div>`;
   if (!r.configured) return `<div class="tile" style="margin-top:10px">Registry not configured — run <code>scripts/registry-setup.sh</code>.</div>`;
   const rows = r.servers.map(s => `<div class="kv"><span class="k">${s.name}</span> → <span class="p">${s.url}</span></div>`).join("");
   return `<div class="tile" style="margin-top:10px"><div class="callhead"><span class="calltxt">Konnect MCP Registry — discoverable servers</span></div>${rows}</div>`;
