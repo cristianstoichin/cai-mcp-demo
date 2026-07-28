@@ -94,6 +94,58 @@ client still had to present a valid cox-auto token to reach them. Kong governs r
 
 ---
 
+## Why the denials are identity-based here — and how it differs from the bearer / UI flow
+
+### Two independent things live in the token
+
+Kong checks two separate fields, and they answer different questions:
+
+| In the token | Example | Who checks it | Question |
+|---|---|---|---|
+| **`scope` + `aud`** | `dealers:read`, `finance:read` + audience `dealer-api` | inner `openid-connect` gate on the REST route | "Is this token *cleared for* the dealer/finance API at all?" |
+| **`groups`** | `[dealers]` / `[finance]` / `[ops]` | tool ACL (`ai-mcp-proxy`) | "Which team is this *person* on?" |
+
+Scopes describe what the **token** is provisioned for; `groups` describes **who the person is**.
+
+### Every browser token carries the same scopes
+
+The `claude-code` client's `dealers:read` / `finance:read` / `mcp:use` are **default** scopes — Keycloak
+always issues them, for every login, regardless of who logs in. So dana, frank, and olivia get
+**structurally identical tokens** (same scopes, same audiences); the only field that differs is `groups`.
+
+Consequence: the inner scope/audience gate **passes for everyone**, so it can never be what denies. Every
+browser-mode denial therefore lands one layer deeper — the **tool ACL** (group mismatch) or **OPA** (call
+argument). When dana is blocked from a finance tool it is *not* because her token lacks finance access
+(it doesn't) — it's because her `groups` is `[dealers]`.
+
+→ **Same token, different entitlement.** You don't hand people different capabilities by minting them
+different scopes; everyone gets the same token and the gateway enforces per-identity policy.
+
+### Same gateway, two OAuth clients (the "why")
+
+The browser flow and the bearer/UI-cockpit flow are the **same governance implementation** — identical
+Kong routes, `ai-mcp-oauth2` + `ai-mcp-proxy`, tool ACLs, OPA policy, and token-exchange config. Kong
+can't tell how a token was obtained; it validates and governs the same either way. What differs is only
+**how the token is minted** — two clients in the same Keycloak realm:
+
+| | Browser flow (Claude Code) | Bearer / UI cockpit |
+|---|---|---|
+| OAuth client | `claude-code` (public, auth-code + PKCE) | `demo-cli` (confidential, ROPC/password) |
+| Scopes | **default** — every persona gets all | **per-persona** — dana only `dealers:read`, etc. |
+| Interactive? | yes (browser login) | no (scripted) |
+| Denials demonstrate | tool ACL (`groups`) + OPA | scope/audience gate + RFC 8693 **token exchange** |
+
+**Why default scopes for the browser client:** in the auth-code flow the *harness* decides which scopes
+to request, and Claude Code requests a generic set — it has no notion of `dealers:read` vs `finance:read`.
+If those were *optional* and unrequested, the token would lack them and every tool call would 403 at the
+inner gate (the exact bug hit on 2026-07-27). Making them **default** guarantees an unmodified harness
+gets a usable token. Per-persona scoping isn't practically available in an interactive login anyway
+(there's no "log in with only `dealers:read`" knob), so the browser flow leans on **group**-based
+governance instead — an equally honest story, just enforced at a different layer.
+
+The two flows are **complementary, not redundant**: together they exercise every governance layer —
+browser covers group ACL + OPA; bearer covers scope/audience + the token exchange.
+
 ## Quick reference — who can call what
 
 | Tool (server) | dana (dealers) | frank (finance) | olivia (ops) |
