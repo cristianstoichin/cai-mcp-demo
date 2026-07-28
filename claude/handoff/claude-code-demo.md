@@ -7,8 +7,16 @@ Companion to README → *Connect Claude Code (MCP client)*. Uses **Option B (bro
 
 ## The auth model (read this first)
 
-- Each persona logs in **once** in the browser; Keycloak SSO then shares that identity across **all 5**
-  registered servers. You do **not** log in per-server or per-tool.
+- The 5 servers are registered together, but Claude Code authenticates them **individually** in the
+  `/mcp` panel — **registering is not authenticating**. Keycloak SSO means that after the **first**
+  browser login, authenticating each remaining server is **one click** (no re-entering credentials),
+  all as the same persona.
+- **Authenticate all 5 servers up-front in `/mcp` before running any demo prompt.** `claude mcp list`
+  should show every `cox-*` as connected, not *"Needs authentication."* If you skip this, a tool call to
+  an un-authenticated server triggers a messy mid-conversation auth — and the model may **improvise a
+  bogus "paste the callback URL here" step, which is NOT how MCP OAuth completes** (the `/mcp` harness
+  captures the callback itself; the model plays no part in the code exchange). A `403` only means "Kong
+  blocked it" when the server is already **connected** — otherwise it's just unauthenticated.
 - In browser mode every persona's token carries the same scopes (the `claude-code` client's scopes are
   default), so **every denial you see is a governance decision on the token's `groups` claim** (the tool
   ACL) **or the OPA argument policy** — not a scope/audience failure. That's the story: *same token,
@@ -36,6 +44,13 @@ scripts/claude-code-setup.sh --browser --apply                            # re-r
 scripts/hosts-alias.sh --apply                                  # host resolves keycloak (sudo)
 docker compose up -d --force-recreate keycloak && docker compose restart kong-dp   # if KC was already running
 scripts/claude-code-setup.sh --browser --apply                 # register the 5 servers
+```
+
+Then in Claude Code: run `/mcp` and **authenticate every `cox-*` server** — the first opens a browser
+login (pick your persona); the rest are one-click via SSO. Verify before demoing:
+
+```bash
+claude mcp list | grep cox-      # every cox-* must say "Connected", not "Needs authentication"
 ```
 
 ---
