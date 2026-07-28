@@ -55,47 +55,66 @@ claude mcp list | grep cox-      # every cox-* must say "Connected", not "Needs 
 
 ---
 
-## Flow 1 — `dana.dealer` (group: **dealers**) — a dealer-desk employee
+## How governance surfaces in Claude Code (read before the flows)
 
-Log in as `dana.dealer`. Then type into Claude Code:
+Kong filters `tools/list` by the caller's `groups`, so **each employee's Claude Code gets a different
+tool catalog** — a tool a persona can't call is **absent**, not shown-then-403'd (a well-behaved client
+only calls tools it can see). So the governance shows up two ways:
 
-| Ask Claude Code | Tool → server | Result | Why |
+- **Group governance → tool visibility.** dana's Claude Code simply has **no** finance tools; frank's has
+  no dealer tools. Visible directly in `claude mcp list` / the `/mcp` panel — the tool *counts* differ per
+  persona. That **is** the enforcement; there's nothing to "try and get 403'd."
+- **OPA argument governance → a live 403.** OPA gates a call *argument*, which `tools/list` can't filter
+  on, so the tool stays visible and the block lands as a real `403` when the argument is used. This is the
+  one hard denial you'll see **inside** Claude Code.
+
+(The tool-ACL's hard `403`-on-call still exists, but only when a tool is called **directly** by name —
+that's the **cockpit / bearer** flow, which bypasses the filtered list. See the last section.)
+
+### What each persona's Claude Code sees
+
+Authenticate all servers, then `claude mcp list` — the catalog is filtered to the group:
+
+| Server | dana (dealers) | frank (finance) | olivia (ops) |
 |---|---|---|---|
-| "list the dealer customers" | `list_dealer_customers` → cox-dealers | ✅ data | dealers ∈ allow[dealers,ops] |
-| "list the dealer vehicles" | `list_dealer_vehicles` → cox-dealers | ✅ data | dealers ∈ allow[dealers,ops] |
-| "list the finance invoices" | `list_invoices` → cox-finance | ❌ **403** | tool ACL — invoices allow[finance,ops]; dana is [dealers] |
-| "show floorplan financing" | `list_floorplans` → cox-finance | ❌ **403** | tool ACL — floorplans allow[finance] only |
+| cox-dealers | customers, vehicles | **—** | customers, vehicles |
+| cox-finance | **—** | floorplans, invoices | invoices *(not floorplans)* |
+| cox-ops | customers | invoices | customers, invoices |
+| cox-market | all (2) | all (2) | all (2) |
+| cox-deepwiki | all (3) | all (3) | all (3) |
 
-**Say:** "A dealer-role token reads every dealer tool and is blocked from every finance tool — Kong
-decided that from the `groups` claim; Claude Code sent no per-tool config."
+The differing catalogs **are** the governance — same 5 registrations, per-identity tool set.
 
-## Flow 2 — `frank.finance` (group: **finance**) — a finance employee
+## Flow 1 — `dana.dealer` (dealers) — a dealer-desk employee
 
-Log in as `frank.finance` (mirror image of dana):
+| Ask Claude Code | What happens | Point |
+|---|---|---|
+| "list the dealer customers" / "list the dealer vehicles" | ✅ returns data | both dealer tools are in dana's catalog |
+| "list the finance invoices" | Claude Code has **no invoices tool** — cox-finance shows *0 tools*, cox-ops exposes only `customers` to her | Kong filtered every finance tool out of her catalog by group |
 
-| Ask Claude Code | Tool → server | Result | Why |
-|---|---|---|---|
-| "list the invoices" | `list_invoices` → cox-finance | ✅ data | finance ∈ allow[finance,ops] |
-| "list the floorplans" | `list_floorplans` → cox-finance | ✅ data | finance ∈ allow[finance] |
-| "list the dealer vehicles" | `list_dealer_vehicles` → cox-dealers | ❌ **403** | tool ACL — allow[dealers,ops] + explicit deny[finance] |
-| "list the dealer customers" | `list_dealer_customers` → cox-dealers | ❌ **403** | tool ACL — allow[dealers,ops]; frank is [finance] |
+**Say:** "dana's Claude Code was never handed a finance tool — Kong scoped her catalog to her group.
+There's nothing to 'try and be denied'; it simply isn't there."
 
-**Say:** "Swap the employee, invert the access — no redeploy, no client change."
+## Flow 2 — `frank.finance` (finance) — the mirror
 
-## Flow 3 — `olivia.ops` (group: **ops**) — cross-functional, but still bounded
+| Ask Claude Code | What happens | Point |
+|---|---|---|
+| "list the invoices" / "list the floorplans" | ✅ data | both finance tools are in frank's catalog |
+| "list the dealer vehicles" | **no dealer tool** in frank's catalog (cox-dealers shows *0 tools*) | inverted access, zero client change |
 
-Log in as `olivia.ops`. This flow shows **two** enforcement layers:
+**Say:** "Swap the employee, invert the catalog — no redeploy, no client config."
 
-| Ask Claude Code | Tool → server | Result | Why |
-|---|---|---|---|
-| "list the dealer customers" | `list_dealer_customers` → cox-dealers/ops | ✅ data | ops ∈ allow[dealers,ops] |
-| "list the invoices" | `list_invoices` → cox-finance/ops | ✅ data | ops ∈ allow[finance,ops] — spans **both** domains |
-| "list the floorplans" | `list_floorplans` → cox-finance | ❌ **403** | tool ACL — allow[finance] only; even ops isn't all-powerful |
-| "list the **overdue** invoices" | `list_invoices` `{query_status: overdue}` → cox-ops | ❌ **403 unauthorized** | **OPA** — an argument-level rule the tool ACL can't express |
+## Flow 3 — `olivia.ops` (ops) — cross-domain, still bounded, + the live OPA 403
 
-**Say:** "Ops spans both domains, but is still fenced off from floorplans — there's no blanket admin. And
-a *second* policy engine (OPA) blocks a sensitive **argument** the tool ACL never sees. Two layers, one
-identity, zero client-side logic."
+| Ask Claude Code | What happens | Point |
+|---|---|---|
+| "list the dealer customers" / "list the invoices" | ✅ data | ops catalog spans **both** domains |
+| "list the floorplans" | **no floorplans tool** (cox-finance exposes only `invoices` to olivia) | `list_floorplans` is `allow[finance]` — even ops is bounded, so it's filtered out |
+| "list the **overdue** invoices" | tool **is** available, but returns **403 unauthorized** | **OPA** blocks the *argument*; `list_invoices` is visible to ops, so this denial surfaces **live** in Claude Code |
+
+**Say:** "Ops spans both domains but is still fenced off from floorplans — filtered right out of the
+catalog. And when olivia calls a tool she *does* have with a sensitive argument, a second policy engine
+(OPA) blocks it live. Group governance shows as what's in the catalog; OPA shows as a 403 on the call."
 
 ## Shared beat — governed remotes (any persona)
 
@@ -161,18 +180,25 @@ governance instead — an equally honest story, just enforced at a different lay
 The two flows are **complementary, not redundant**: together they exercise every governance layer —
 browser covers group ACL + OPA; bearer covers scope/audience + the token exchange.
 
-## Quick reference — who can call what
+## Quick reference — who can call what (call-level truth)
+
+This is the **call-level** ACL (what a *direct* `tools/call` returns). In Claude Code, a ❌ here means the
+tool is **absent from that persona's catalog** (filtered from `tools/list`), except the OPA row — that
+tool is visible and returns a live 403. In the **cockpit/bearer** flow every ❌ is a direct-call 403.
 
 | Tool (server) | dana (dealers) | frank (finance) | olivia (ops) |
 |---|:--:|:--:|:--:|
 | `list_dealer_customers` (cox-dealers, cox-ops) | ✅ | ❌ | ✅ |
 | `list_dealer_vehicles` (cox-dealers) | ✅ | ❌ | ✅ |
 | `list_invoices` (cox-finance, cox-ops) | ❌ | ✅ | ✅ |
-| `list_invoices` + `query_status=overdue` | ❌ | ❌ | ❌ **(OPA)** |
+| `list_invoices` + `query_status=overdue` | ❌ | ❌ | ❌ **(OPA, live 403)** |
 | `list_floorplans` (cox-finance) | ❌ | ✅ | ❌ |
 | cox-market / cox-deepwiki (remotes) | ✅ | ✅ | ✅ |
 
-**Which layer denies:** group mismatch → **tool ACL** (ai-mcp-proxy, `groups` claim); sensitive argument →
-**OPA** (`/mcp/ops` only). In browser mode the inner scope/audience gate never denies (all tokens carry
-all scopes) — to also demo scope/audience denial + the RFC 8693 **token exchange**, use the bearer flow
-(`scripts/get-token.sh` per persona) or the demo-ui cockpit, which mint per-persona *scoped* tokens.
+**Which layer denies, and how it shows in Claude Code:**
+- **group mismatch → tool ACL** (`groups` claim). In Claude Code this is **tool absence** (filtered
+  `tools/list`); via a direct call it's a `403`.
+- **sensitive argument → OPA** (`/mcp/ops`). The tool stays visible, so this is a **live 403** in Claude Code.
+- **inner scope/audience gate** never denies in browser mode (all tokens carry all scopes) — to demo that
+  layer + the RFC 8693 **token exchange**, use the bearer flow (`scripts/get-token.sh` per persona) or the
+  demo-ui cockpit, which mint per-persona *scoped* tokens and call tools directly.

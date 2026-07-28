@@ -247,7 +247,8 @@ Legend: ✅ verified against current docs · ⚠️ provisional / verify live ·
   enforces scope+audience on the forwarded token).
 - ✅ **Live matrix**: dana→dealer OK; frank→finance OK; olivia(ops)→list_floorplans DENY (allow:[finance]);
   frank→dealer tool DENY (allow:[dealers,ops]); olivia→list_invoices OK. `[ai-mcp-proxy] MCP ACL: denying`
-  logged on denials. tools/list is NOT ACL-filtered — enforcement is at call time.
+  logged on denials. ~~tools/list is NOT ACL-filtered — enforcement is at call time.~~ **CORRECTED
+  2026-07-28: tools/list IS ACL-filtered by group in EE 3.14.0.2** — see the dated entry below.
 
 ## Build findings (demo-ui) — verdict signatures re-verified LIVE
 - ✅ All 5 verdict signatures reproduced through the demo-ui server (`POST /api/mcp`) against the
@@ -472,3 +473,26 @@ INNER openid-connect gate on the forwarded REST route:
 - Reminder: the `/etc/hosts` keycloak pin is still required for the browser's Keycloak leg — re-apply
   `scripts/hosts-alias.sh --apply` and re-authenticate in Claude Code (the old cached token is now
   invalid on both counts: missing scope AND signed with a rotated-away key).
+
+## Doc-vs-reality (2026-07-28) — tools/list IS ACL-filtered by group (supersedes Phase-4 claim)
+
+The Phase-4 note "tools/list is NOT ACL-filtered — enforcement is at call time" is **wrong for EE
+3.14.0.2** (behavior differs from whatever was observed earlier). Measured live via `tools/list` with
+each persona's token — the advertised catalog is filtered to the tools the caller's `groups` claim is
+allowed to call, exactly matching the per-tool `acl.allow`:
+
+| tools/list → | /mcp/dealers | /mcp/finance | /mcp/ops |
+|---|---|---|---|
+| dana (dealers) | customers, vehicles | **∅** | customers |
+| frank (finance) | ∅ | floorplans, invoices | invoices |
+| olivia (ops) | customers, vehicles | invoices *(not floorplans)* | customers, invoices |
+
+- **Demo implication (important):** in Claude Code the governance surfaces as **per-identity tool
+  visibility**, NOT as a 403 on call — a well-behaved MCP client only calls tools it can see, so a
+  denied tool is simply **absent** from that persona's catalog (`claude mcp list` shows dana's cox-finance
+  as "connected · no tools"). The hard `403` at the tool ACL still exists and is what the **cockpit /
+  bearer** flows show, because they call tools **directly** (bypassing the filtered list). So: Claude Code
+  demo = tool-catalog filtering by identity; cockpit/bearer demo = the visceral 403 on a denied call.
+- Call-time enforcement is unchanged (a direct `tools/call` of a filtered-out tool still 403s — verified:
+  dana bearer → /mcp/finance list_invoices → 403 HTML). List-time filtering is an ADDITIONAL layer, not a
+  replacement.
