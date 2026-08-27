@@ -8,6 +8,7 @@
 | External policy | Open Policy Agent | `1.4.2` | Demonstrates Kong `opa` plugin delegating tool-call authz to an external policy engine. |
 | Upstream services | Node.js + Express | Node `20-alpine`, express `^4.19` | Minimal mock REST APIs; `npm install` only, no build step. |
 | Local MCP server | Node.js (streamable-HTTP MCP) | Node `20-alpine` | Reliable on-theme passthrough target for `/mcp/remote`. |
+| Custom MCP server | Python + MCP SDK (`mcp`) | Python `3.12-slim`, `mcp==2.0.0` | Hand-written MCP server for `/mcp/custom` — shows Kong governing a custom tool it did not generate, in a second language. **`mcp` 2.x uses `mcp.server.mcpserver.MCPServer`; `mcp.server.fastmcp` no longer exists** (see NOTES.md). |
 | Remote MCP (public) | DeepWiki MCP | `mcp.deepwiki.com` | Third-party MCP server for the "govern something you don't own" story. |
 | Orchestration | Docker Compose | v2 | One `docker compose up`; `tools` profile for the deck one-shot. |
 | Konnect APIs | Control Plane API + MCP Registry (Labs) | `v2` / `v0` (`klabs`) | CP create + DP cert (bootstrap); MCP Registry publish/discovery (tech preview). |

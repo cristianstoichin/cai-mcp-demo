@@ -273,6 +273,72 @@ services:
                 log_audits: true
                 log_statistics: true
 
+  - name: custom-mcp-service        # hand-written PYTHON MCP server we built ourselves
+    url: ${{ env "DECK_CUSTOM_MCP_URL" }}
+    connect_timeout: 10000
+    read_timeout: 60000
+    write_timeout: 60000
+    routes:
+      - name: mcp-custom
+        paths: [/mcp/custom]
+        methods: [GET, POST, DELETE]
+        strip_path: true
+        request_buffering: false
+        response_buffering: false
+        plugins:
+          # Same gate as the other two passthrough remotes: a valid cox-auto token is
+          # REQUIRED (unauthenticated -> 401), but there is deliberately NO tool ACL, so
+          # every persona (dana/frank/olivia) may call the custom tool. Contrast with the
+          # /mcp/dealers|finance|ops listeners, where acl.allow/deny narrows per group.
+          - name: ai-mcp-oauth2
+            instance_name: mcp-oauth2-custom
+            config:
+              authorization_servers: [http://keycloak:8080/realms/cox-auto]
+              resource: http://localhost:8000/mcp/custom
+              metadata_discovery_endpoint: http://keycloak:8080/realms/cox-auto/.well-known/openid-configuration
+              insecure_relaxed_audience_validation: true
+              passthrough_credentials: false
+              # Resolve the token to one of the three `consumers:` identity records so Konnect
+              # analytics attributes each custom-tool call to a PERSON (the agentic_usage
+              # "tool calls by consumer" tile only populates from real consumer entities — see
+              # decision U12). Authorization is UNAFFECTED: it is still the token's `groups`
+              # claim on the ai-mcp-proxy ACL below. Mirrors the /mcp/dealers|finance|ops
+              # listeners; without these two fields this route's traffic shows up unattributed.
+              consumer_claim: [preferred_username]
+              consumer_by: [username]
+              consumer_optional: true
+              claim_to_header:
+                - claim: sub
+                  header: X-User-Id
+                - claim: preferred_username
+                  header: X-User-Name
+          - name: ai-mcp-proxy
+            instance_name: mcp-passthrough-custom
+            config:
+              mode: passthrough-listener
+              # Per-tool ACL on a PASSTHROUGH server: the tools[] entry does not generate
+              # anything (the Python server owns the tool) — it matches the remote tool BY NAME
+              # so the group ACL can be enforced. Same token-claim subject as the /mcp/dealers|
+              # finance|ops listeners: the validated token's `groups` claim, no Kong consumers.
+              # Enforced at BOTH tools/list (filtered catalog) and tools/call (403).
+              acl_attribute_type: oauth_access_token
+              access_token_claim_field: groups
+              tools:
+                - name: hello_custom_tool
+                  # `description` is REQUIRED by the shared tools[] schema even in passthrough
+                  # mode, where it is never surfaced (the remote server's own description wins
+                  # in tools/list). Omitting it fails deck validate/sync with
+                  # 400 "validation error: required field missing". See NOTES.md 2026-08-12.
+                  description: >-
+                    Matches the remote Python server's hello_custom_tool for ACL enforcement only.
+                  acl:
+                    # dealers + finance may call it; ops is NOT in the allow list, so olivia is
+                    # denied — deliberately, the same shape as list_floorplans (allow: [finance]).
+                    allow: [finance, dealers]
+              logging:
+                log_audits: true
+                log_statistics: true
+
 # =============================================================================
 # MCP listener routes (serviceless). Each aggregates the conversion-only tools
 # whose plugin carries the matching entity tag (config.server.tag). Phase 4 adds

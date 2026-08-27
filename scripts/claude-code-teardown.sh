@@ -32,7 +32,7 @@ if $APPLY && ! command -v claude >/dev/null 2>&1; then
 fi
 
 # Must match the SERVERS names in claude-code-setup.sh.
-NAMES=(cox-dealers cox-finance cox-ops cox-market cox-deepwiki)
+NAMES=(cox-dealers cox-finance cox-ops cox-market cox-deepwiki cox-custom)
 
 echo -e "${YELLOW}# Unregister cai-mcp-demo MCP servers from Claude Code${NC}"
 echo ""

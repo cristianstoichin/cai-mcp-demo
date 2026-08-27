@@ -111,8 +111,8 @@ export const scenarios = [
     id: "convert", n: 2, title: "REST → MCP conversion", tag: "CONVERT", railLabel: "REST → MCP",
     headline: "Kong converts those APIs into MCP tools",
     proves: "REST→MCP conversion with zero rewrite of the upstream services.",
-    why: "tools/list is never filtered — listing is open; enforcement happens when a tool is actually called (step 3).",
-    narration: "Same APIs, now MCP tools, tag-aggregated: /mcp/dealers = 2 tools, /mcp/finance = 2, /mcp/ops = 2 bundled (dealer+finance).",
+    why: "SUPERSEDED 2026-07-28 — tools/list IS ACL-filtered per identity on EE 3.14.0.2. See NOTES.md; the shipped scenarios.js carries the corrected copy.",
+    narration: "SUPERSEDED — as olivia /mcp/finance returns 1 tool, not 2 (floorplans is finance-only and filtered out).",
     calls: [
       { label: "/mcp/dealers tools/list", persona: "olivia", identity: "Olivia", verdictLabel: "200 · 2 tools", kind: "mcp", path: "/mcp/dealers",
         tool: null, method: "tools/list", expect: { verdict: "allow" } },

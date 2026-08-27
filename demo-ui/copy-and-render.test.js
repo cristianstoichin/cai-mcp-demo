@@ -9,7 +9,7 @@ import { overviewHTML } from "./public/overview.js";
 import contentDefault from "./public/content.js";
 
 test("every scene has customer-facing copy fields", () => {
-  assert.equal(scenarios.length, 7);
+  assert.equal(scenarios.length, 8);
   for (const s of scenarios) {
     for (const f of ["headline", "proves", "why", "railLabel"]) {
       assert.equal(typeof s[f], "string", `scene ${s.n} missing ${f}`);

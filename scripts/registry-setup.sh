@@ -40,6 +40,7 @@ PUBLISH=(
   "publish-ops.json:ops bundled (/mcp/ops)"
   "publish-remote.json:market remote (/mcp/remote)"
   "publish-remote-public.json:deepwiki remote-public (/mcp/remote-public)"
+  "publish-custom.json:custom python (/mcp/custom)"
 )
 
 # ---------------------------------------------------------------------------

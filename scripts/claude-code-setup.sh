@@ -53,6 +53,10 @@ SERVERS=(
   "cox-ops:/mcp/ops:olivia"
   "cox-market:/mcp/remote:olivia"
   "cox-deepwiki:/mcp/remote-public:olivia"
+  # Hand-written Python MCP server, per-tool ACL allow:[finance,dealers]. Default persona is
+  # dana (allowed) — do NOT default this one to olivia: ops is not in the allow list, so her
+  # catalog for cox-custom is EMPTY and the server would look broken in a bearer-mode demo.
+  "cox-custom:/mcp/custom:dana"
 )
 
 # ---------------------------------------------------------------------------

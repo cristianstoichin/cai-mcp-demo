@@ -29,7 +29,7 @@ docker compose version >/dev/null 2>&1 && pass "docker compose" || fail "docker 
 [[ -f certs/tls.crt && -f certs/tls.key ]] && pass "DP certs present" || warn "certs/ missing (run scripts/konnect-bootstrap.sh)"
 
 # --- container health ---
-for svc in keycloak dealer-svc finance-svc kong-dp opa market-mcp; do
+for svc in keycloak dealer-svc finance-svc kong-dp opa market-mcp custom-mcp; do
   st=$(docker compose ps --format '{{.Service}} {{.Status}}' 2>/dev/null | awk -v s="$svc" '$1==s{$1="";print}')
   if [[ -z "$st" ]]; then warn "container ${svc}: not running"
   elif echo "$st" | grep -qi "healthy\|Up"; then pass "container ${svc}:${st}"

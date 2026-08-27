@@ -1,3 +1,5 @@
-node_modules/
+# node_modules/ is intentionally NOT ignored: the image prefers a host-installed
+# node_modules because corporate TLS interception can block the public npm registry
+# from inside the build container. See Dockerfile + NOTES.md 2026-08-12.
 .playwright-mcp/
 npm-debug.log

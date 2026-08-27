@@ -81,6 +81,13 @@ for svc in dealer-svc finance-svc market-mcp; do
   fi
 done
 
+# custom-mcp is Python — no `node` binary in that image, so use urllib for the same check.
+if docker compose exec -T custom-mcp python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:3000/health').status==200 else 1)" 2>/dev/null; then
+  pass "custom-mcp /health = 200"
+else
+  fail "custom-mcp /health not 200"
+fi
+
 tok(){ "${SCRIPT_DIR}/get-token.sh" "$1" "${2:-}" --raw 2>/dev/null; }
 code(){ curl -s -o /dev/null -w "%{http_code}" -X POST "${KONG}$1" ${2:+-H "Authorization: Bearer $2"} -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" -d "$3"; }
 
@@ -91,6 +98,17 @@ if [[ -z "$DANA" ]]; then fail "could not mint tokens (Keycloak down?)"; else
   c=$(code /mcp/ops "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_invoices","arguments":{}}}'); [[ "$c" == "200" ]] && pass "olivia list_invoices /mcp/ops -> 200" || fail "olivia list_invoices -> ${c}"
   c=$(code /mcp/ops "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_invoices","arguments":{"query_status":"overdue"}}}'); [[ "$c" == "403" ]] && pass "OPA denies overdue filter -> 403" || fail "OPA overdue -> ${c} (want 403)"
   c=$(code /mcp/remote "" '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'); [[ "$c" == "401" ]] && pass "/mcp/remote unauth -> 401" || fail "/mcp/remote unauth -> ${c}"
+  # /mcp/custom — hand-written Python server behind a PER-TOOL ACL on a passthrough listener
+  # (allow: [finance, dealers]). Guard both sides: dana+frank allowed, olivia (ops) DENIED —
+  # ops is deliberately absent from the allow list. This is the documented access model.
+  c=$(code /mcp/custom "" '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'); [[ "$c" == "401" ]] && pass "/mcp/custom unauth -> 401" || fail "/mcp/custom unauth -> ${c}"
+  FRANK=$(tok frank)
+  cust='{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hello_custom_tool","arguments":{}}}'
+  for who in "dana:${DANA}:200" "frank:${FRANK}:200" "olivia:${OLIVIA}:403"; do
+    name="${who%%:*}"; rest="${who#*:}"; tokn="${rest%:*}"; want="${rest##*:}"
+    c=$(code /mcp/custom "$tokn" "$cust")
+    [[ "$c" == "$want" ]] && pass "${name} hello_custom_tool /mcp/custom -> ${want}" || fail "${name} hello_custom_tool -> ${c} (want ${want})"
+  done
 fi
 
 echo ""

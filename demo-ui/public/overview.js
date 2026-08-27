@@ -64,7 +64,7 @@ export function overviewHTML(scenarios, content) {
       Endpoints: <code>/mcp/dealers</code>, <code>/mcp/finance</code>, <code>/mcp/ops</code>
       (bundle; token-exchange + OPA also run here).</p>
 
-    <div class="ov-h2">The seven steps</div>
+    <div class="ov-h2">The demo, step by step</div>
     <div class="scenes">${scenarios.map(sceneBlock).join("")}</div>
 
     <div class="ov-h2">How to read a result</div>

@@ -100,6 +100,28 @@ services:
           memory: 128M
 
   # ---------------------------------------------------------------------------
+  # Hand-written PYTHON MCP server — passthrough-listener target for /mcp/custom.
+  # Not a converted REST API: a real MCP server in another language, governed by Kong.
+  # Per-tool ACL (allow: finance, dealers) enforced by Kong on a tool it never generated.
+  # ---------------------------------------------------------------------------
+  custom-mcp:
+    build:
+      context: ./custom-mcp
+    ports:
+      - "${CUSTOM_MCP_PORT:-3004}:3000"
+    healthcheck:
+      # python:slim ships no curl; use urllib (mirrors the Node services' node -e check).
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:3000/health').status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ---------------------------------------------------------------------------
   # OPA — external policy for /mcp/ops (Phase 5).
   # ---------------------------------------------------------------------------
   opa:
@@ -220,6 +242,8 @@ services:
       # so the demo is portable (swap DeepWiki for any third-party MCP server).
       DECK_REMOTE_MCP_URL: ${REMOTE_MCP_URL}
       DECK_REMOTE_PUBLIC_MCP_URL: ${REMOTE_PUBLIC_MCP_URL}
+      # Hand-written Python MCP server behind /mcp/custom (same passthrough pattern).
+      DECK_CUSTOM_MCP_URL: ${CUSTOM_MCP_URL}
     volumes:
       - ./kong:/config:ro
     profiles: ["tools"]

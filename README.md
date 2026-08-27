@@ -19,6 +19,7 @@ Konnect MCP Registry. One `docker compose up` runs everything except the Konnect
 | 7 | **Passthrough governance** — front an MCP server you own *and* a third-party one you don't | `/mcp/remote` → market-mcp, `/mcp/remote-public` → DeepWiki |
 | 8 | **MCP Registry** — publish + discover the servers in Konnect | `scripts/registry-setup.sh` |
 | 9 | **Konnect analytics dashboard** — MCP volume, per-server split, error/denial rate, latency | `scripts/install-dashboard.sh` |
+| 10 | **Custom hand-written tool, any language** — a Python MCP server Kong governs but did not generate, with a **per-tool ACL on a passthrough listener** (`allow: [finance, dealers]`; ops denied) | `/mcp/custom` → `custom-mcp/` |
 
 Identity: Keycloak `cox-auto` realm, personas **dana** (dealers), **frank** (finance), **olivia** (ops, both groups).
 
@@ -100,7 +101,9 @@ Each step runs live against the stack. Expected results:
 1. **REST OIDC gates** — no token → `401`; dana on the dealer API → `200`; dana on the finance API → `403`
    (missing `finance:read` scope + `finance-api` audience).
 2. **REST → MCP conversion** — `tools/list`: `/mcp/dealers` = `list_dealer_customers, list_dealer_vehicles`;
-   `/mcp/finance` = `list_invoices, list_floorplans`; `/mcp/ops` = `list_dealer_customers, list_invoices` (bundled by tag).
+   `/mcp/finance` = `list_invoices` only (`list_floorplans` is finance-only, so it is filtered out of an
+   ops catalog); `/mcp/ops` = `list_dealer_customers, list_invoices` (bundled by tag). `tools/list` is
+   ACL-filtered per identity, so these are **olivia's** catalogs, not a global inventory.
 3. **Token-claim tool ACL** — olivia (ops) → `list_invoices` returns data; frank (finance) → `list_dealer_customers`
    → `403` (his `groups:[finance]` isn't in the tool's `allow:[dealers,ops]`). No Kong consumers involved.
 4. **RFC 8693 token exchange** — an `mcp:use`-only token (no API audiences) → `/mcp/ops list_dealer_customers`
@@ -110,6 +113,9 @@ Each step runs live against the stack. Expected results:
    → `403` (an argument-level rule the tool ACL can't express). Edit `opa/policies/mcp.rego` and OPA hot-reloads — no Kong sync.
 6. **Passthrough remotes** — `/mcp/remote` unauth → `401`; authed → market-mcp tools;
    `/mcp/remote-public` authed → DeepWiki tools (`ask_question`, `read_wiki_contents`, `read_wiki_structure`). A valid cox-auto token is required for the third-party server.
+   Then `/mcp/custom` (hand-written Python) unauth → `401`; **dana and frank** call `hello_custom_tool`
+   → `"Hello from custom tool"`, **olivia → `403`** (ops isn't in `allow: [finance, dealers]`). Her
+   `tools/list` on that server is empty too — a per-tool ACL enforced on a server Kong never converted.
 7. **MCP Registry** — `scripts/registry-setup.sh` publishes and discovers all 5 servers in Konnect.
 
 ## Connect Claude Code (MCP client)
@@ -125,6 +131,7 @@ and OPA all still run. `scripts/claude-code-setup.sh` registers five MCP servers
 | `cox-ops` | `/mcp/ops` | olivia (ops — both groups; the token-exchange route) |
 | `cox-market` | `/mcp/remote` | olivia (passthrough → local market-mcp) |
 | `cox-deepwiki` | `/mcp/remote-public` | olivia (passthrough → third-party DeepWiki) |
+| `cox-custom` | `/mcp/custom` | dana (passthrough → hand-written Python server; ACL `allow: [finance, dealers]`, so **olivia's catalog for it is empty**) |
 
 > Prereqs: the stack is up (`docker compose up -d`) and the `claude` CLI is installed. Both scripts
 > **print** the commands by default; add `--apply` to actually run them.
@@ -224,13 +231,13 @@ scripts/ui.sh                              # Node 20+ host; npm-installs on firs
 Five modes (left nav) — the cockpit opens on **Overview** so it explains itself before you drive it:
 
 - **Overview** *(default landing)* — a read-first, customer-facing page: who the three people are
-  (Dana / Frank / Olivia), a matrix of which of the four MCP tools each may call, the seven steps
+  (Dana / Frank / Olivia), a matrix of which of the four MCP tools each may call, the eight steps
   (each with a plain "what it proves"), and a legend for reading verdicts. Nothing to run — it's the
   "what the hell is being demoed" answer.
 - **Demo** — the scripted 7-step story with a top stepper. Each step shows its plain-language headline
   and "Proves:", then ▶ Run fires the real calls; every call row carries the caller's **identity badge**
   (`no token` / Dana / Frank / Olivia) and an honest verdict label, over the plugin-chain trace.
-- **Present** — the same 7 scenes as a self-driven **tell-show-tell** walkthrough: ▶ Run enters a
+- **Present** — the same 8 scenes as a self-driven **tell-show-tell** walkthrough: ▶ Run enters a
   scene, then one **Next ▸** advances the setup Tell → each live call (one per click, cumulative) → the
   takeaway Tell → the next scene. Presenter/self-paced; identical live calls to Demo, single-sourced from
   `scenarios.js`.
@@ -242,7 +249,7 @@ Five modes (left nav) — the cockpit opens on **Overview** so it explains itsel
   note, because a container shouldn't tear down its own compose project.
 
 Local-only (published on `127.0.0.1`, no UI auth); all secrets (PAT, client secrets) stay server-side
-and never reach the browser. No build step. The 7 steps and their customer-facing copy are data in
+and never reach the browser. No build step. The 8 steps and their customer-facing copy are data in
 `demo-ui/scenarios.js` (the single source of truth for both Overview and Demo; mirrors `demo.sh`);
 the personas/tool-matrix/legend are `demo-ui/public/content.js`; the response→verdict classifier is
 `demo-ui/verdict.js`. Unit tests: `cd demo-ui && npm test` (verdict classifier + copy/render integrity).
@@ -251,6 +258,8 @@ the personas/tool-matrix/legend are `demo-ui/public/content.js`; the response→
 
 - `dealer-svc/`, `finance-svc/` — Node/Express mock REST APIs (converted to MCP tools).
 - `market-mcp/` — local Cox-themed MCP server (Streamable HTTP), the `/mcp/remote` passthrough target.
+- `custom-mcp/` — hand-written **Python** MCP server (Streamable HTTP, stateless), the `/mcp/custom`
+  passthrough target. One tool (`hello_custom_tool`) restricted to the `finance` + `dealers` groups.
 - `keycloak/realm-export.json` — pre-baked `cox-auto` realm (zero manual clicks).
 - `kong/konnect.yaml` — the entire declarative decK config.
 - `opa/policies/mcp.rego` — external policy for `/mcp/ops`.

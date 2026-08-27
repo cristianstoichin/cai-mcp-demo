@@ -43,7 +43,8 @@ pause
 
 # ---------------------------------------------------------------------------
 step "2. REST → MCP conversion — same APIs, now MCP tools (tag-aggregated)"
-note "/mcp/dealers = 2 tools, /mcp/finance = 2, /mcp/ops = 2 bundled (dealer+finance)."
+note "As olivia: /mcp/dealers = 2 tools, /mcp/finance = 1 (floorplans is finance-only -> filtered out), /mcp/ops = 2 bundled."
+note "tools/list is ACL-filtered per identity, so this catalog is olivia's -- not a global inventory."
 OLIVIA=$(tok olivia)
 echo -n "  /mcp/dealers tools: "; rpc /mcp/dealers "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | names
 echo -n "  /mcp/finance tools: "; rpc /mcp/finance "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | names
@@ -87,7 +88,27 @@ echo -n "  /mcp/remote-public authed tools -> "; rpc /mcp/remote-public "$OLIVIA
 pause
 
 # ---------------------------------------------------------------------------
-step "7. MCP Registry discovery — the servers are catalogued in Konnect"
+step "7. Custom tool, governed — a hand-written PYTHON MCP server Kong did not generate"
+note "/mcp/custom fronts custom-mcp (Python) via passthrough-listener with a PER-TOOL ACL (allow: finance, dealers)."
+note "Kong enforces the ACL by matching the remote tool BY NAME — the Python server has no idea the ACL exists."
+echo -n "  /mcp/custom        unauth -> HTTP "; code /mcp/custom "" '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'; echo " (401)"
+# tools/list is ACL-filtered, so the catalog itself differs by persona: dana sees the tool,
+# olivia (ops, not in the allow list) sees an empty catalog.
+echo -n "  /mcp/custom  dana  tools -> "; rpc /mcp/custom "$DANA"   '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | names
+echo -n "  /mcp/custom  olivia tools -> "; o=$(rpc /mcp/custom "$OLIVIA" '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | names); echo "${o:-<empty — filtered by ACL>}"
+# Same tool, three people: dealers + finance allowed, ops denied (even naming it directly).
+for who in dana:"$DANA":200 frank:"$FRANK":200 olivia:"$OLIVIA":403; do
+  nm="${who%%:*}"; rest="${who#*:}"; tk="${rest%:*}"; want="${rest##*:}"
+  printf '  %-6s hello_custom_tool -> HTTP ' "$nm"
+  got=$(code /mcp/custom "$tk" '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"hello_custom_tool","arguments":{}}}')
+  if [[ "$got" == "$want" && "$got" == "200" ]]; then echo -e "${got} ${GREEN}\"Hello from custom tool\"${NC}"
+  elif [[ "$got" == "$want" ]]; then echo -e "${got} ${YELLOW}(ACL deny — ops not in allow-list)${NC}"
+  else echo -e "${RED}${got} (wanted ${want})${NC}"; fi
+done
+pause
+
+# ---------------------------------------------------------------------------
+step "8. MCP Registry discovery — the servers are catalogued in Konnect"
 if [[ -n "${KONNECT_MCP_REGISTRY_ID:-}" && -n "${KONNECT_TOKEN:-}" ]]; then
   API="https://klabs.${KONNECT_REGION:-us}.api.konghq.com/v0/mcp-registries/${KONNECT_MCP_REGISTRY_ID}/v0.1/servers"
   curl -s "${API}" -H "Authorization: Bearer ${KONNECT_TOKEN}" | python3 -c "

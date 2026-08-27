@@ -496,3 +496,82 @@ allowed to call, exactly matching the per-tool `acl.allow`:
 - Call-time enforcement is unchanged (a direct `tools/call` of a filtered-out tool still 403s — verified:
   dana bearer → /mcp/finance list_invoices → 403 HTML). List-time filtering is an ADDITIONAL layer, not a
   replacement.
+
+## Doc-vs-reality (2026-08-12) — Python MCP SDK 2.x: `mcp.server.fastmcp` is GONE
+
+Building `custom-mcp/` (the hand-written Python MCP server behind `/mcp/custom`). Verified by
+introspection inside `python:3.12-slim` with `mcp==2.0.0`:
+
+- `from mcp.server.fastmcp import FastMCP` → **`ModuleNotFoundError`**. Every pre-2.0 tutorial and
+  most LLM-recalled snippets use this import; it does not exist in 2.x. Do not "fix" the import back.
+- The high-level class is **`mcp.server.mcpserver.MCPServer`** — same ergonomics (`@mcp.tool()`,
+  `mcp.custom_route()`, `mcp.run(transport=...)`), different home.
+- `run_streamable_http_async` / `streamable_http_app` kwargs (2.0.0): `host` (default `127.0.0.1`),
+  `port` (`8000`), `streamable_http_path` (**`/mcp`**), `json_response`, `stateless_http`,
+  `event_store`, `retry_interval`, `max_request_body_size`, `transport_security`.
+- 🔧 **`TransportSecuritySettings.enable_dns_rebinding_protection` defaults to `True`**, which validates
+  the inbound `Host` header against an allow-list. Kong proxies to the service as `custom-mcp:3000`, so
+  the default **rejects every gateway-borne request**. We pass
+  `TransportSecuritySettings(enable_dns_rebinding_protection=False)` — the trust boundary is Kong +
+  `ai-mcp-oauth2`, and the container port is never publicly exposed.
+- Chose `stateless_http=True` so a single-POST `tools/call` works from curl / `demo.sh` / the cockpit.
+  (`market-mcp` is session-based, which is why `demo.sh` only shows its auth gate, never a tool call.)
+- The tool's **docstring is forwarded verbatim** as the agent-facing `description` in `tools/list`,
+  indentation and newlines included — keep it to one tight line.
+
+Live-verified through Kong: `/mcp/custom` unauth → **401** with
+`WWW-Authenticate: Bearer resource_metadata="http://localhost:8000/mcp/custom/.well-known/oauth-protected-resource"`
+(identical shape to `/mcp/remote`); dana, frank and olivia each → `tools/list` = `hello_custom_tool` and
+`tools/call` → `"Hello from custom tool"`. No realm change was needed: the passthrough gate uses
+`insecure_relaxed_audience_validation`, so any valid `cox-auto` token is accepted.
+
+⚠️ **Timing gotcha when testing right after `deck gateway sync`:** the CP accepts the config before the
+DP has pulled it, so a request in the first second or two after sync 404s at the router (no route yet),
+not 401. Re-test after a beat before concluding a route is broken.
+
+## Verified schema fact (2026-08-12) — per-tool ACLs DO work on `passthrough-listener`
+
+Question: can a remote/hand-written MCP server (which Kong does not convert) have its tools
+restricted to some groups? **Yes — live-verified on Kong EE 3.14.0.2** against `/mcp/custom`.
+
+Working config on the `passthrough-listener` plugin:
+
+```yaml
+mode: passthrough-listener
+acl_attribute_type: oauth_access_token     # same token-claim subject as the other listeners
+access_token_claim_field: groups
+tools:
+  - name: hello_custom_tool                # MATCHES the remote server's tool by name
+    description: >-                        # ⚠️ REQUIRED (see below)
+      Matches the remote tool for ACL enforcement only.
+    acl:
+      allow: [finance, ops]
+```
+
+Measured result (`hello_custom_tool`, `allow: [finance, ops]`):
+
+| persona | `tools/list` | `tools/call` |
+|---|---|---|
+| dana (dealers) | **∅ empty catalog** | **403** |
+| frank (finance) | hello_custom_tool | 200 |
+| olivia (ops) | hello_custom_tool | 200 |
+
+So enforcement is at BOTH list and call time, same as the conversion-only listeners
+(consistent with the 2026-07-28 `tools/list` filtering finding).
+
+- 🔧 **`tools[].description` is REQUIRED even in passthrough mode.** Omitting it fails
+  `deck gateway validate`/`sync` with `HTTP 400 (message: "validation error: required field missing")`.
+  This is a genuine oddity: in passthrough Kong does not *generate* the tool, so the description is
+  never surfaced (the remote server's own description wins in `tools/list`) — it exists only to satisfy
+  the shared `tools[]` schema. Do not omit it.
+- `method`/`path` are NOT required here (unlike `conversion-only`) — the entry only matches by `name`.
+- Whole-server gating alternative: `config.default_acl` — a list of `{scope, allow, deny}` entries
+  (`scope` defaults to `tools`) valid on listener modes but NOT `conversion-only`. Per docs, a tool with
+  its own `acl` IGNORES `default_acl`, and a tool with an `acl` must list every allowed subject
+  explicitly. Useful for "this whole remote is finance-only" without naming each remote tool.
+- ⚠️ **Propagation lag reconfirmed:** after `deck gateway sync`, ACL changes took >8s to reach the DP —
+  an immediate re-test showed the PREVIOUS decision (a stale 403 after reverting to no-ACL). Wait
+  ~20s or retry before concluding.
+
+**The demo now SHIPS with this ACL applied** as `allow: [finance, dealers]` (decision 2026-08-12,
+amended same day): dana + frank allowed, **olivia (ops) denied** and filtered out of `tools/list`.

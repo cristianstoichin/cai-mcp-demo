@@ -1,0 +1,12 @@
+{
+  "name": "com.cox-automotive/custom-mcp",
+  "title": "Cox Custom MCP (hand-written Python)",
+  "version": "1.0.0",
+  "description": "Hand-written Python MCP server governed by Kong; one tool, limited to finance+dealers.",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "http://localhost:8000/mcp/custom"
+    }
+  ]
+}
