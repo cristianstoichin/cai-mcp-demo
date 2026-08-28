@@ -1,23 +1,23 @@
 // content.js — customer-facing static copy for the Overview + Demo legend.
 // Client ESM, NO secrets. Persona values mirror config.personas / get-token.sh;
-// matrix allow-lists are verified against kong/konnect.yaml (2026-07-24).
+// matrix allow-lists are verified against kong/konnect.yaml (2026-08-28).
 
 export const personas = [
   { key: "dana", name: "Dana", username: "dana.dealer",
     role: "Dealership operations — works with customers and inventory.",
     group: "dealers", scopes: ["dealers:read", "mcp:use"],
-    can: ["Dealer tools — customers, inventory"],
+    can: ["Dealer tools — customers, inventory", "Custom tool — the Python MCP server"],
     cant: ["Finance tools — invoices, floor-plans"] },
   { key: "frank", name: "Frank", username: "frank.finance",
     role: "Floor-plan financing — works with dealer invoices and audits.",
     group: "finance", scopes: ["finance:read", "mcp:use"],
-    can: ["Finance tools — invoices, floor-plans"],
+    can: ["Finance tools — invoices, floor-plans", "Custom tool — the Python MCP server"],
     cant: ["Dealer tools — customers, inventory"] },
   { key: "olivia", name: "Olivia", username: "olivia.ops",
     role: "Cross-functional operations — spans dealer and finance.",
     group: "ops", scopes: ["dealers:read", "finance:read", "mcp:use"],
     can: ["Dealer + finance — customers, inventory, invoices"],
-    cant: ["Floor-plans (finance-only, by design)"] },
+    cant: ["Floor-plans (finance-only, by design)", "Custom tool (dealers + finance only)"] },
 ];
 
 export const matrix = [
@@ -29,6 +29,8 @@ export const matrix = [
     allow: ["finance", "ops"], dana: false, frank: true,  olivia: true },
   { tool: "list_floorplans",       returns: "Floor-plan audit status",
     allow: ["finance"],        dana: false, frank: true,  olivia: false },
+  { tool: "hello_custom_tool",     returns: "Greeting from the hand-written Python MCP server",
+    allow: ["finance", "dealers"], dana: true, frank: true, olivia: false },
 ];
 
 export const legend = [

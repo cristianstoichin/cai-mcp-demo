@@ -2,7 +2,7 @@
 
 Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 
-- **Branch:** `feat/cai-mcp-demo-build` (build in progress; merge to `main` when demo verified end-to-end)
+- **Branch:** `main` (build merged; 6 phases + cockpit LIVE-verified against my org)
 - **Design spec:** `claude/specs/2026-07-22-cai-mcp-demo-design.md`
 - **Plan:** `claude/plans/2026-07-22-cai-mcp-demo-implementation.md` (6 phases)
 - **Konnect:** live CP `cai-mcp-demo` (id `<your-control-plane-id>`), region `us`.
@@ -12,7 +12,30 @@ Slim boot context. Details live in `claude/handoff/` fragments (read on demand).
 - **Sync:** `docker compose --profile tools run --rm deck gateway sync /config/konnect.yaml`
 - **Token:** `./scripts/get-token.sh <dana|frank|olivia> [scope-override] [--raw]`
 
-## Since last session (2026-07-24)
+## Since last session (2026-08-28)
+
+- **Custom Python MCP server is in** (`custom-mcp/`, `mcp==2.0.0`, streamable-HTTP **stateless**),
+  governed at `/mcp/custom` by `ai-mcp-proxy` **passthrough-listener** + `ai-mcp-oauth2`, carrying a
+  **per-tool group ACL on a passthrough server**: `hello_custom_tool` `allow: [finance, dealers]`, so
+  dana + frank may call it and **olivia (ops) is denied and filtered out of `tools/list`**. The route
+  also has `consumer_claim`/`consumer_by` so Konnect analytics attributes the call to a person.
+  Decisions 2026-08-12 + its same-day amendment; registry body `publish-custom.json`.
+- **Counts moved with it: the repo is now 8 demo steps and 6 MCP servers.** Custom got its own scene in
+  `scenarios.js` + `demo.sh`; `registry-setup.sh` PUBLISH, `claude-code-setup.sh` SERVERS and
+  `claude-code-teardown.sh` NAMES each carry 6 entries.
+- **Present** (2026-07-27) is the cockpit's 5th mode — self-driven tell-show-tell over the same
+  `scenarios.js` scenes (`demo-ui/public/present.js`).
+- **Doc-drift pass (this session; static checks only — Docker was down).** Fixed step/server counts in
+  `README.md`, `ARCHITECTURE.md`, `RUNBOOK.md`, `claude/handoff/claude-code-demo.md`,
+  `scripts/registry-setup.sh` and the Overview lede; added a `demo-ui` row to `TECHSTACK.md` and
+  `custom-mcp`/`demo-ui`/Present to the ARCHITECTURE module map + README mermaid; rewrote the stale
+  `konnect.yaml` comment that claimed `/mcp/custom` had **no** tool ACL; added `hello_custom_tool` to the
+  Overview permission matrix with a `copy-and-render.test.js` assertion on its allow-list (18/18 pass).
+- **NEXT:** `handoff/state.md` + `handoff/next.md` are still pre-custom-mcp and quote live-run counts
+  (`preflight 17/17`, `smoke-test 14/14`) taken before the custom-mcp checks existed. Refresh them
+  **after** a real `./scripts/preflight.sh` + `./scripts/smoke-test.sh` — do not hand-edit those numbers.
+
+## Earlier (2026-07-24)
 
 - **Overview view + cockpit intuitiveness pass SHIPPED + LIVE-verified (Playwright).** New default
   landing **Overview** (customer-facing: personas + tool matrix + 7 steps + verdict legend), and Demo

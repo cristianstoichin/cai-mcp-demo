@@ -28,6 +28,7 @@ Identity: Keycloak `cox-auto` realm, personas **dana** (dealers), **frank** (fin
 ```mermaid
 flowchart TB
   client["MCP client<br/>(curl / Claude Code)"]
+  ui["demo-ui cockpit<br/>127.0.0.1:4000"]
   kc["Keycloak 26<br/>realm cox-auto<br/>:8080"]
   konnect["Konnect control plane<br/>(SaaS) + MCP Registry"]
 
@@ -35,22 +36,24 @@ flowchart TB
     rest["REST routes<br/>openid-connect + ai-mcp-proxy conversion-only"]
     lst["/mcp/dealers · /mcp/finance · /mcp/ops<br/>ai-mcp-oauth2 + ai-mcp-proxy listener<br/>(tag-aggregate + token-claim ACL)"]
     ops["/mcp/ops extras<br/>introspection + RFC 8693 exchange + OPA"]
-    pass["/mcp/remote · /mcp/remote-public<br/>ai-mcp-oauth2 + passthrough-listener"]
+    pass["/mcp/remote · /mcp/remote-public · /mcp/custom<br/>ai-mcp-oauth2 + passthrough-listener<br/>(per-tool ACL on /mcp/custom)"]
   end
 
   dealer["dealer-svc :3000"]
   finance["finance-svc :3000"]
   market["market-mcp :3000<br/>(MCP, owned)"]
   deepwiki["DeepWiki<br/>(MCP, third-party)"]
+  custom["custom-mcp :3000<br/>(MCP, hand-written Python)"]
   opa["OPA :8181<br/>mcp.rego"]
 
   client -- "Bearer (Keycloak JWT)" --> dp
+  ui -- "drives the same live calls" --> dp
   kc -. "JWKS / introspection / token exchange" .-> dp
   konnect -. "config push (decK sync)" .-> dp
   rest --> dealer & finance
   lst --> rest
   ops -. "policy query" .-> opa
-  pass --> market & deepwiki
+  pass --> market & deepwiki & custom
 ```
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the module + Kong-topology tables, and
@@ -113,16 +116,17 @@ Each step runs live against the stack. Expected results:
    → `403` (an argument-level rule the tool ACL can't express). Edit `opa/policies/mcp.rego` and OPA hot-reloads — no Kong sync.
 6. **Passthrough remotes** — `/mcp/remote` unauth → `401`; authed → market-mcp tools;
    `/mcp/remote-public` authed → DeepWiki tools (`ask_question`, `read_wiki_contents`, `read_wiki_structure`). A valid cox-auto token is required for the third-party server.
-   Then `/mcp/custom` (hand-written Python) unauth → `401`; **dana and frank** call `hello_custom_tool`
-   → `"Hello from custom tool"`, **olivia → `403`** (ops isn't in `allow: [finance, dealers]`). Her
-   `tools/list` on that server is empty too — a per-tool ACL enforced on a server Kong never converted.
-7. **MCP Registry** — `scripts/registry-setup.sh` publishes and discovers all 5 servers in Konnect.
+7. **Custom tool, governed** — `/mcp/custom` (hand-written Python) unauth → `401`; **dana and frank** call
+   `hello_custom_tool` → `"Hello from custom tool"`, **olivia → `403`** (ops isn't in
+   `allow: [finance, dealers]`). Her `tools/list` on that server is empty too — a per-tool ACL enforced
+   on a server Kong never converted.
+8. **MCP Registry** — `scripts/registry-setup.sh` publishes and discovers all 6 servers in Konnect.
 
 ## Connect Claude Code (MCP client)
 
 Point Claude Code (or any MCP harness) at the governed servers. Every tool call goes through Kong
 (`:8000`) no matter how the token was obtained, so OAuth validation, tool ACLs, RFC 8693 token exchange,
-and OPA all still run. `scripts/claude-code-setup.sh` registers five MCP servers:
+and OPA all still run. `scripts/claude-code-setup.sh` registers six MCP servers:
 
 | Server | Route | Default persona |
 |--------|-------|-----------------|
@@ -148,7 +152,7 @@ Both point every server at Kong, so governance is identical either way.
 ### Option A — Bearer token
 
 ```bash
-./scripts/claude-code-setup.sh --apply   # registers all 5 servers with per-persona tokens
+./scripts/claude-code-setup.sh --apply   # registers all 6 servers with per-persona tokens
 ```
 
 Tokens are short-lived — just re-run to refresh. (Drop `--apply` to print the commands without running them.)
@@ -159,7 +163,7 @@ Tokens are short-lived — just re-run to refresh. (Drop `--apply` to print the 
 # 1. one-time per machine — let the host resolve the Keycloak issuer name (prompts for sudo)
 ./scripts/hosts-alias.sh --apply
 
-# 2. register all 5 servers against the pre-built `claude-code` OAuth client (no tokens)
+# 2. register all 6 servers against the pre-built `claude-code` OAuth client (no tokens)
 ./scripts/claude-code-setup.sh --browser --apply
 
 # 3. in Claude Code: run `/mcp`, then log in as a persona in the browser that opens
@@ -198,7 +202,7 @@ see [`claude/handoff/claude-code-demo.md`](claude/handoff/claude-code-demo.md).
 
 ### Tear down afterwards
 
-`claude-code-teardown.sh` is the inverse of setup — it unregisters the five servers and (opt-in) removes
+`claude-code-teardown.sh` is the inverse of setup — it unregisters the six servers and (opt-in) removes
 the host alias. It does **not** stop the stack, so re-running the demo later is one command.
 
 ```bash
@@ -231,10 +235,10 @@ scripts/ui.sh                              # Node 20+ host; npm-installs on firs
 Five modes (left nav) — the cockpit opens on **Overview** so it explains itself before you drive it:
 
 - **Overview** *(default landing)* — a read-first, customer-facing page: who the three people are
-  (Dana / Frank / Olivia), a matrix of which of the four MCP tools each may call, the eight steps
+  (Dana / Frank / Olivia), a matrix of which of the five MCP tools each may call, the eight steps
   (each with a plain "what it proves"), and a legend for reading verdicts. Nothing to run — it's the
   "what the hell is being demoed" answer.
-- **Demo** — the scripted 7-step story with a top stepper. Each step shows its plain-language headline
+- **Demo** — the scripted 8-step story with a top stepper. Each step shows its plain-language headline
   and "Proves:", then ▶ Run fires the real calls; every call row carries the caller's **identity badge**
   (`no token` / Dana / Frank / Olivia) and an honest verdict label, over the plugin-chain trace.
 - **Present** — the same 8 scenes as a self-driven **tell-show-tell** walkthrough: ▶ Run enters a

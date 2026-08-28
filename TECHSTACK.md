@@ -10,6 +10,7 @@
 | Local MCP server | Node.js (streamable-HTTP MCP) | Node `20-alpine` | Reliable on-theme passthrough target for `/mcp/remote`. |
 | Custom MCP server | Python + MCP SDK (`mcp`) | Python `3.12-slim`, `mcp==2.0.0` | Hand-written MCP server for `/mcp/custom` — shows Kong governing a custom tool it did not generate, in a second language. **`mcp` 2.x uses `mcp.server.mcpserver.MCPServer`; `mcp.server.fastmcp` no longer exists** (see NOTES.md). |
 | Remote MCP (public) | DeepWiki MCP | `mcp.deepwiki.com` | Third-party MCP server for the "govern something you don't own" story. |
+| Demo cockpit | Node.js + Express + vanilla-JS SPA | Node `20-alpine`, express `^4.19` | `demo-ui/` — the visual cockpit (Overview/Demo/Present/Explore/Stack). No build step; ships as its own Dockerfile + compose service, and is host-runnable via `scripts/ui.sh` for the Stack execute actions. |
 | Orchestration | Docker Compose | v2 | One `docker compose up`; `tools` profile for the deck one-shot. |
 | Konnect APIs | Control Plane API + MCP Registry (Labs) | `v2` / `v0` (`klabs`) | CP create + DP cert (bootstrap); MCP Registry publish/discovery (tech preview). |
 

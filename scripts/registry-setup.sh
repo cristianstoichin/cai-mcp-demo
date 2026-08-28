@@ -33,7 +33,7 @@ done
 [[ -z "${TOKEN}" ]] && { echo -e "${RED}[ERROR]${NC} KONNECT_TOKEN not set (fill .env)." >&2; exit 1; }
 AUTH="Authorization: Bearer ${TOKEN}"
 
-# The 5 servers to publish (body file : friendly label).
+# The 6 servers to publish (body file : friendly label).
 PUBLISH=(
   "publish-dealers.json:dealers (/mcp/dealers)"
   "publish-finance.json:finance (/mcp/finance)"

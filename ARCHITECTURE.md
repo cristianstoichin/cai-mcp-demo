@@ -17,14 +17,14 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
         └─ /api/dealers/*, /api/finance/*  (openid-connect + ai-mcp-proxy conversion-only)
                     │
                     ▼
-        dealer-svc / finance-svc / market-mcp (upstream)
+     dealer-svc / finance-svc / market-mcp / custom-mcp (upstream)
 ```
 
 ## Modules
 
 | Path | Responsibility |
 |------|----------------|
-| `docker-compose.yaml` | All services: kong-dp, keycloak, opa, dealer-svc, finance-svc, market-mcp, deck (tools profile). |
+| `docker-compose.yaml` | All services: kong-dp, keycloak, opa, dealer-svc, finance-svc, market-mcp, custom-mcp, demo-ui, deck (tools profile). |
 | `.env.example` | Every org-specific/secret value. Copy to `.env`. Nothing org-specific lives elsewhere. |
 | `keycloak/realm-export.json` | Pre-baked `cox-auto` realm: scopes (`dealers:read`/`finance:read`/`mcp:use`), `identity`+`groups` scopes, groups, 3 users, 3 clients (demo-cli/claude-code/kong-exchange). |
 | `kong/konnect.yaml` | Declarative decK config — services, routes, OIDC gates, ai-mcp-proxy (conversion-only + listener + passthrough), ai-mcp-oauth2, consumers, groups, ACLs, OPA plugin. |
@@ -33,7 +33,7 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 | `finance-svc/` | Node/Express mock: `GET /invoices`, `GET /floorplans`, `/health`. Logs inbound headers. |
 | `market-mcp/` | Local Cox-themed MCP server (streamable-HTTP) — passthrough target for `/mcp/remote`. |
 | `custom-mcp/` | Hand-written **Python** MCP server (streamable-HTTP, stateless) — passthrough target for `/mcp/custom`. One tool, `hello_custom_tool`, gated by a per-tool ACL (`allow: [finance, dealers]`) declared on the passthrough listener. Proves the gateway governs — and group-restricts — custom tools it did not generate, in any language. |
-| `konnect/mcp-registry/*.json` | Registry create + 5 publish bodies (dealers, finance, ops, remote, remote-public). |
+| `konnect/mcp-registry/*.json` | Registry create + 6 publish bodies (dealers, finance, ops, remote, remote-public, custom). |
 | `scripts/konnect-bootstrap.sh` | Create CP + generate/upload DP cert + print endpoints. |
 | `scripts/get-token.sh` | Mint persona token (ROPC via demo-cli), decode + print claims. |
 | `scripts/registry-setup.sh` | Create MCP Registry + publish + discovery GET. |
@@ -47,8 +47,8 @@ MCP client (curl / Claude Code)                Konnect control plane (SaaS)
 | `demo-ui/keycloak.js` / `kong.js` / `registry.js` / `stack.js` | Thin I/O adapters: token mint/exchange/decode; MCP+REST calls; Konnect registry discovery; whitelisted stack-action SSE runner. |
 | `demo-ui/verdict.js` (+ `.test.js`) | Pure response-signature → governance verdict classifier (the one unit-tested module). Coarse taxonomy (U8) — untouched by the copy layer. |
 | `demo-ui/scenarios.js` | The 8 Demo steps as data — single source of truth for both Demo **and** Overview (U11). Carries the customer-facing copy: `headline`/`proves`/`why`/`railLabel` per scene, `identity`/`verdictLabel` per call. Mirrors `demo.sh`. |
-| `demo-ui/copy-and-render.test.js` | Node `--test`: scenarios copy integrity, `content.js` (personas/matrix) vs `konnect.yaml`, and the pure `trace.js`/`overview.js` string-builders. |
-| `demo-ui/public/` | Vanilla-JS SPA, no build step: `index.html` shell; `app.js` router (default → Overview) + Overview/Demo/Explore/Stack views; `content.js` customer-facing static copy (personas, tool matrix, verdict legend — no secrets); `overview.js` Overview landing view (`overviewHTML` pure builder + DOM attach); `trace.js` hybrid-panel renderer + pure presentation helpers (`identityBadge`/`verdictKind`/`verdictChip`); `styles.css` (Cox palette via CSS variables). |
+| `demo-ui/copy-and-render.test.js` | Node `--test`: scenarios copy integrity, `content.js` (personas/matrix) vs `konnect.yaml`, and the pure `trace.js`/`overview.js`/`present.js` string-builders. |
+| `demo-ui/public/` | Vanilla-JS SPA, no build step: `index.html` shell; `app.js` router (default → Overview) + Overview/Demo/Present/Explore/Stack views; `content.js` customer-facing static copy (personas, tool matrix, verdict legend — no secrets); `overview.js` Overview landing view (`overviewHTML` pure builder + DOM attach); `present.js` Present-mode tell-show-tell driver (`phaseSequence` pure builder); `trace.js` hybrid-panel renderer + pure presentation helpers (`identityBadge`/`verdictKind`/`verdictChip`); `styles.css` (Cox palette via CSS variables). |
 | `demo-ui/Dockerfile` | Multi-stage (mirrors the aegis dashboard). The `demo-ui` compose service reaches Kong/Keycloak on the in-network hostnames; published host-local on `127.0.0.1:4000`; read-only Docker socket for the Stack status tiles. Stack execute actions are host-only (`scripts/ui.sh`). |
 
 ## Kong topology (services → routes → plugins)

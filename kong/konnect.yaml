@@ -287,9 +287,11 @@ services:
         response_buffering: false
         plugins:
           # Same gate as the other two passthrough remotes: a valid cox-auto token is
-          # REQUIRED (unauthenticated -> 401), but there is deliberately NO tool ACL, so
-          # every persona (dana/frank/olivia) may call the custom tool. Contrast with the
-          # /mcp/dealers|finance|ops listeners, where acl.allow/deny narrows per group.
+          # REQUIRED (unauthenticated -> 401). Unlike them, this route ALSO carries a
+          # PER-TOOL group ACL (the ai-mcp-proxy tools[] entry below, allow: [finance,
+          # dealers]): dana + frank may call hello_custom_tool; olivia (ops) is denied and
+          # does not even see it in tools/list. Same acl.allow/deny narrowing the
+          # /mcp/dealers|finance|ops listeners do — but on a server Kong never converted.
           - name: ai-mcp-oauth2
             instance_name: mcp-oauth2-custom
             config:

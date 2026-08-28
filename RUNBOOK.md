@@ -57,7 +57,7 @@ Idempotent — safe to re-run. It writes a `.env.bak` before touching `.env`.
 
 ```bash
 ./scripts/preflight.sh     # tools, container health, port reachability
-./scripts/demo.sh          # guided 7-step CLI walkthrough (pauses between steps)
+./scripts/demo.sh          # guided 8-step CLI walkthrough (pauses between steps)
 ./scripts/ui.sh            # OR the visual cockpit at http://127.0.0.1:4000
 ```
 

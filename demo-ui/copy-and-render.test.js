@@ -44,6 +44,7 @@ test("content.matrix matches konnect.yaml allow-lists", () => {
   assert.deepEqual(byTool.list_dealer_customers.allow, ["dealers", "ops"]);
   assert.deepEqual(byTool.list_invoices.allow, ["finance", "ops"]);
   assert.deepEqual(byTool.list_floorplans.allow, ["finance"]);
+  assert.deepEqual(byTool.hello_custom_tool.allow, ["finance", "dealers"]);
   for (const m of matrix) {
     assert.equal(m.dana, m.allow.includes("dealers"));
     assert.equal(m.frank, m.allow.includes("finance"));
@@ -83,7 +84,7 @@ test("verdictChip carries the kind class and the label text", () => {
 test("overviewHTML renders all sections and is customer-safe", () => {
   const html = overviewHTML(scenarios, contentDefault);
   for (const n of ["Dana", "Frank", "Olivia"]) assert.match(html, new RegExp(n));
-  for (const t of ["list_dealer_customers", "list_invoices", "list_floorplans"]) assert.match(html, new RegExp(t));
+  for (const t of ["list_dealer_customers", "list_invoices", "list_floorplans", "hello_custom_tool"]) assert.match(html, new RegExp(t));
   for (const s of scenarios) assert.ok(html.includes(s.headline), `missing headline: ${s.headline}`);
   assert.match(html, /Passed every gate/);
   assert.ok(!/confusingly wrong|being fixed|gets wrong/i.test(html), "internal callout leaked");

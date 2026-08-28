@@ -49,7 +49,7 @@ export function overviewHTML(scenarios, content) {
     <h1 class="ov-h1">Governed MCP — what this demo shows</h1>
     <p class="ov-lede">Kong turns Cox Automotive's REST APIs into <b>MCP servers</b> and governs every
       call — who the caller is, which tools they may use, and what policy says about the specific
-      request. Three people, one gateway, seven things it proves.</p>
+      request. Three people, one gateway, eight things it proves.</p>
 
     <div class="ov-h2">The three people</div>
     <div class="cast">${personas.map(personaCard).join("")}</div>
